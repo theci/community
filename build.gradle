@@ -85,7 +85,8 @@ tasks.withType(JavaCompile) {
 
 // 컴파일 에러가 있는 파일들 임시 제외
 tasks.named('compileJava') {
-    exclude '**/engagement/presentation/web/PostLikeController.java'
+    // 좋아요 기능 활성화 (2025-12-22)
+    // exclude '**/engagement/presentation/web/PostLikeController.java'
     exclude '**/engagement/presentation/web/PostScrapController.java'
     exclude '**/engagement/presentation/web/ScrapFolderController.java'
     // 댓글 관리 기능 활성화 (2025-12-22)

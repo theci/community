@@ -6,6 +6,8 @@ import com.community.platform.content.infrastructure.persistence.PostRepository;
 import com.community.platform.user.infrastructure.persistence.UserRepository;
 import com.community.platform.content.exception.PostNotFoundException;
 import com.community.platform.user.exception.UserNotFoundException;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -79,47 +81,49 @@ public class PostLikeService {
 
     /**
      * 게시글 좋아요 상태 토글 (좋아요 ↔ 좋아요 취소)
+     * Controller용 메서드 - LikeResult 반환
      */
     @Transactional
-    public boolean togglePostLike(Long userId, Long postId) {
+    public LikeResult toggleLike(Long userId, Long postId) {
         log.info("게시글 좋아요 상태 토글. userId: {}, postId: {}", userId, postId);
-        
+
         boolean isLiked = postLikeRepository.existsByUserIdAndPostId(userId, postId);
-        
+
         if (isLiked) {
             removePostLike(userId, postId);
-            return false; // 좋아요 취소됨
         } else {
             addPostLike(userId, postId);
-            return true; // 좋아요 추가됨
         }
+
+        Long totalCount = postLikeRepository.countByPostId(postId);
+        return new LikeResult(!isLiked, totalCount);
     }
 
     /**
      * 사용자의 게시글 좋아요 상태 확인
      */
-    public boolean isPostLikedByUser(Long userId, Long postId) {
+    public boolean isLikedByUser(Long userId, Long postId) {
         return postLikeRepository.existsByUserIdAndPostId(userId, postId);
     }
 
     /**
      * 게시글의 좋아요 개수 조회
      */
-    public Long getPostLikeCount(Long postId) {
+    public Long getLikeCount(Long postId) {
         return postLikeRepository.countByPostId(postId);
     }
 
     /**
      * 사용자가 좋아요한 게시글 목록 조회
      */
-    public Page<PostLike> getUserLikedPosts(Long userId, Pageable pageable) {
+    public Page<PostLike> getUserLikes(Long userId, Pageable pageable) {
         return postLikeRepository.findByUserIdOrderByCreatedAtDesc(userId, pageable);
     }
 
     /**
      * 게시글을 좋아요한 사용자 목록 조회
      */
-    public Page<PostLike> getPostLikedUsers(Long postId, Pageable pageable) {
+    public Page<PostLike> getPostLikes(Long postId, Pageable pageable) {
         return postLikeRepository.findByPostIdOrderByCreatedAtDesc(postId, pageable);
     }
 
@@ -182,5 +186,66 @@ public class PostLikeService {
         if (!postRepository.existsById(postId)) {
             throw new PostNotFoundException(postId);
         }
+    }
+
+    /**
+     * 인기 게시글 조회 (좋아요 수 기준)
+     */
+    public Page<Object[]> getPopularPosts(int days, Pageable pageable) {
+        LocalDateTime fromDate = LocalDateTime.now().minusDays(days);
+        List<Object[]> results = postLikeRepository.findMostLikedPostIds(fromDate, pageable);
+        // 간단한 Page 래퍼 반환
+        return org.springframework.data.support.PageableExecutionUtils.getPage(
+            results, pageable, results::size
+        );
+    }
+
+    /**
+     * 트렌딩 게시글 조회 (최근 급상승)
+     */
+    public Page<Object[]> getTrendingPosts(int hours, Pageable pageable) {
+        LocalDateTime fromDate = LocalDateTime.now().minusHours(hours);
+        List<Object[]> results = postLikeRepository.findMostLikedPostIds(fromDate, pageable);
+        return org.springframework.data.support.PageableExecutionUtils.getPage(
+            results, pageable, results::size
+        );
+    }
+
+    /**
+     * 좋아요 통계 조회
+     */
+    public Object[] getLikeStatistics(int days) {
+        // 간단한 통계 구현 - 실제로는 더 복잡한 통계 로직 필요
+        Long totalLikes = postLikeRepository.count();
+        return new Object[]{totalLikes, days};
+    }
+
+    /**
+     * 사용자별 좋아요 활동 조회
+     */
+    public Object[] getUserLikeActivity(Long userId, int days) {
+        Long userLikeCount = postLikeRepository.countByUserId(userId);
+        return new Object[]{userId, userLikeCount, days};
+    }
+
+    /**
+     * 의심스러운 좋아요 패턴 감지
+     */
+    public Page<Object[]> getSuspiciousLikePatterns(Pageable pageable) {
+        // 간단한 구현 - 실제로는 더 복잡한 로직 필요
+        List<Object[]> emptyList = List.of();
+        return org.springframework.data.support.PageableExecutionUtils.getPage(
+            emptyList, pageable, () -> 0L
+        );
+    }
+
+    /**
+     * 좋아요 토글 결과를 담는 DTO
+     */
+    @Getter
+    @AllArgsConstructor
+    public static class LikeResult {
+        private final boolean isLiked;
+        private final Long totalLikeCount;
     }
 }

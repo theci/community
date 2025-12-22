@@ -38,15 +38,15 @@
 ✅ **구현 완료**
 - **사용자 관리**: 회원가입, 로그인, JWT 인증
 - **게시글 관리**: CRUD, 검색, 발행, 인기글, 트렌딩
-- **댓글 관리**: CRUD, 대댓글, 계층형 구조 ✨ NEW!
-- **Redis 연결**: AWS ElastiCache 연동 완료 ✨ NEW!
+- **댓글 관리**: CRUD, 대댓글, 계층형 구조
+- **좋아요 관리**: 게시글 좋아요/취소, 좋아요 목록 조회 ✨ NEW!
+- **Redis 연결**: AWS ElastiCache 연동 완료
 - 카테고리 관리 (계층형 구조)
 - 태그 시스템
-- 스크랩 폴더 관리 (기본 CRUD)
 - Spring Security 설정
 
 ⚠️ **부분 구현** (컴파일 제외됨)
-- 좋아요/스크랩 기능
+- 스크랩 기능 (PostScrapController, ScrapFolderController)
 
 🔴 **미구현**
 - 알림 시스템
@@ -63,7 +63,6 @@
 
 **Controllers (표현 계층)**
 ```
-✗ PostLikeController.java
 ✗ PostScrapController.java
 ✗ ScrapFolderController.java
 ```
@@ -101,7 +100,7 @@
 - **GET** `/api/v1/tags` - 태그 목록
 - **POST** `/api/v1/tags` - 태그 생성
 
-#### 💬 **댓글 API** (CommentController, CommentService) ✨ NEW!
+#### 💬 **댓글 API** (CommentController, CommentService)
 - **POST** `/api/v1/comments?currentUserId={userId}` - 댓글 작성 (인증 필요)
 - **GET** `/api/v1/comments/posts/{postId}` - 게시글의 댓글 목록 조회 (계층형)
 - **GET** `/api/v1/comments/posts/{postId}/root` - 게시글의 최상위 댓글만 조회
@@ -114,6 +113,13 @@
 - **GET** `/api/v1/comments/recent` - 최근 댓글 조회 (관리자용)
 - **POST** `/api/v1/comments/{commentId}/block` - 댓글 차단 (관리자용)
 - **POST** `/api/v1/comments/{commentId}/restore` - 댓글 복원 (관리자용)
+
+#### ❤️ **좋아요 API** (PostLikeController, PostLikeService) ✨ NEW!
+- **POST** `/api/v1/posts/{postId}/like?currentUserId={userId}` - 게시글 좋아요 토글 (인증 필요)
+- **GET** `/api/v1/posts/{postId}/like/status?currentUserId={userId}` - 좋아요 상태 확인
+- **GET** `/api/v1/posts/{postId}/like/count` - 게시글 좋아요 수 조회
+- **GET** `/api/v1/posts/{postId}/likes` - 게시글 좋아요한 사용자 목록 조회
+- **GET** `/api/v1/posts/likes/me?currentUserId={userId}` - 내가 좋아요한 게시글 목록 조회
 
 #### 💊 **Health Check**
 - **GET** `/actuator/health` - 서버 상태 확인
@@ -429,6 +435,55 @@ curl -X DELETE "http://54.180.251.210:8080/api/v1/comments/1?currentUserId=1" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
+### 9. 게시글 좋아요 테스트 (좋아요 기능) ✨ NEW!
+
+**좋아요 토글 (인증 필요)**
+```bash
+# 1. 로그인하여 토큰 받기 (위 5번 참고)
+TOKEN=$(curl -s -X POST http://54.180.251.210:8080/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"test@example.com","password":"Password123@"}' \
+  | grep -o '"accessToken":"[^"]*' | cut -d'"' -f4)
+
+# 2. 게시글 좋아요 (첫 번째 호출 시 좋아요 추가)
+curl -X POST "http://54.180.251.210:8080/api/v1/posts/1/like?currentUserId=1" \
+  -H "Authorization: Bearer $TOKEN"
+
+# 3. 게시글 좋아요 다시 호출 (좋아요 취소)
+curl -X POST "http://54.180.251.210:8080/api/v1/posts/1/like?currentUserId=1" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+**응답 예시 (좋아요 추가):**
+```json
+{
+  "success": true,
+  "data": {
+    "postId": 1,
+    "isLiked": true,
+    "totalLikeCount": 1,
+    "message": "좋아요를 누르셨습니다"
+  },
+  "message": null,
+  "timestamp": "2025-12-22T13:00:00"
+}
+```
+
+**좋아요 상태 및 정보 조회**
+```bash
+# 좋아요 상태 확인
+curl "http://54.180.251.210:8080/api/v1/posts/1/like/status?currentUserId=1"
+
+# 게시글 좋아요 수 조회
+curl "http://54.180.251.210:8080/api/v1/posts/1/like/count"
+
+# 게시글을 좋아요한 사용자 목록 조회
+curl "http://54.180.251.210:8080/api/v1/posts/1/likes"
+
+# 내가 좋아요한 게시글 목록 조회
+curl "http://54.180.251.210:8080/api/v1/posts/likes/me?currentUserId=1"
+```
+
 ---
 
 ## 📝 Postman으로 테스트하기
@@ -475,7 +530,7 @@ Authorization: Bearer {{accessToken}}
 
 ## 🔨 앞으로 구현해야 할 부분
 
-### ✅ 완료된 부분 (2025-12-22)
+### ✅ 완료된 부분
 
 1. **UserService 복구** (2025-12-21)
    - ✅ Exception import 문제 해결
@@ -495,18 +550,25 @@ Authorization: Bearer {{accessToken}}
    - ✅ `/api/v1/auth/login` 공개 API로 설정
    - ✅ `/api/v1/auth/refresh`, `/api/v1/auth/validate` 공개 API로 설정
 
-5. **게시글 관리 기능 복구** (2025-12-22) ✨ NEW!
+5. **게시글 관리 기능 복구** (2025-12-22)
    - ✅ PostService Exception import 추가 (PostNotFoundException, CategoryNotFoundException)
    - ✅ PostRepositoryImpl QueryDSL Tuple 변환 문제 해결
    - ✅ PostRepository에 PostRepositoryCustom 재연결
    - ✅ PostController 활성화
    - ✅ 게시글 CRUD, 검색, 발행, 인기글, 트렌딩 API 사용 가능
 
+6. **좋아요 관리 기능 복구** (2025-12-22) ✨ NEW!
+   - ✅ PostLikeService LikeResult 클래스 추가
+   - ✅ PostLikeService 메서드 보완 (toggleLike, getLikeCount 등)
+   - ✅ PostLikeController 중복 엔드포인트 제거
+   - ✅ PostLikeController 활성화
+   - ✅ 좋아요 토글, 상태 확인, 목록 조회 API 사용 가능
+
 ### 🚧 다음 구현 단계
 
-#### Phase 1: 좋아요/스크랩 기능 복구 (다음 우선순위)
+#### Phase 1: 스크랩 기능 복구 (다음 우선순위)
 
-**PostLikeController, PostScrapController, ScrapFolderController 복구**
+**PostScrapController, ScrapFolderController 복구**
 - 각 Controller의 Service 의존성 확인
 - 누락된 메서드 구현
 - API 엔드포인트 테스트
@@ -555,7 +617,10 @@ Authorization: Bearer {{accessToken}}
 - [x] 댓글 차단/복원 (관리자용)
 
 #### 참여 기능
-- [ ] 게시글 좋아요
+- [x] 게시글 좋아요 ✨ NEW!
+- [x] 좋아요 토글 (추가/취소)
+- [x] 좋아요 상태 확인
+- [x] 좋아요한 사용자/게시글 목록 조회
 - [ ] 게시글 스크랩
 - [ ] 스크랩 폴더 관리
 
@@ -728,22 +793,30 @@ com.community.platform
 4. ✅ PostController 활성화
 5. ✅ 게시글 CRUD, 검색, 인기글 테스트 가능
 
-### ✅ Phase 3: 댓글 기능 복구 (완료 - 2025-12-22) ✨ NEW!
+### ✅ Phase 3: 댓글 기능 복구 (완료 - 2025-12-22)
 1. ✅ CommentService 복구 (Exception import 추가, 중복 클래스 제거)
 2. ✅ CommentController 활성화
 3. ✅ 댓글/대댓글 CRUD API 사용 가능
 4. ✅ 계층형 댓글 구조 지원
 5. ✅ Redis 연동 완료 (AWS ElastiCache)
 
-### 🚧 Phase 4: 참여 기능 복구 (다음 단계)
-1. [ ] 좋아요/스크랩 Controller 활성화
-2. [ ] 전체 워크플로우 테스트
+### ✅ Phase 4: 좋아요 기능 복구 (완료 - 2025-12-22) ✨ NEW!
+1. ✅ PostLikeService 복구 (LikeResult 클래스 추가, 메서드 보완)
+2. ✅ PostLikeController 활성화
+3. ✅ 좋아요 토글, 상태 확인, 목록 조회 API 사용 가능
+4. ✅ 게시글 좋아요 수 자동 업데이트
+5. ✅ 좋아요한 사용자/게시글 목록 조회 기능
+
+### 🚧 Phase 5: 스크랩 기능 복구 (다음 단계)
+1. [ ] PostScrapController, ScrapFolderController 활성화
+2. [ ] 스크랩 폴더 관리 기능 복구
+3. [ ] 전체 워크플로우 테스트
 
 ---
 
 ## 🎉 테스트 시나리오
 
-### 현재 가능한 전체 워크플로우 ✨ 댓글 기능 추가!
+### 현재 가능한 전체 워크플로우 ✨ 좋아요 기능 추가!
 
 ```bash
 # 1. 회원가입
@@ -801,16 +874,26 @@ curl -X POST "http://54.180.251.210:8080/api/v1/comments?currentUserId=1" \
     "content": "저도 동감합니다!"
   }'
 
-# 10. 댓글 목록 조회 (계층형) ✨ NEW!
+# 10. 댓글 목록 조회 (계층형)
 curl "http://54.180.251.210:8080/api/v1/comments/posts/1"
 
-# 11. 인기 게시글 조회
+# 11. 게시글 좋아요 ✨ NEW!
+curl -X POST "http://54.180.251.210:8080/api/v1/posts/1/like?currentUserId=1" \
+  -H "Authorization: Bearer $TOKEN"
+
+# 12. 좋아요 상태 확인 ✨ NEW!
+curl "http://54.180.251.210:8080/api/v1/posts/1/like/status?currentUserId=1"
+
+# 13. 게시글 좋아요 수 조회 ✨ NEW!
+curl "http://54.180.251.210:8080/api/v1/posts/1/like/count"
+
+# 14. 인기 게시글 조회
 curl "http://54.180.251.210:8080/api/v1/posts/popular?days=7"
 
-# 12. 카테고리 조회
+# 15. 카테고리 조회
 curl http://54.180.251.210:8080/api/v1/categories/tree
 
-# 13. 로그아웃
+# 16. 로그아웃
 curl -X POST http://54.180.251.210:8080/api/v1/auth/logout \
   -H "Authorization: Bearer $TOKEN"
 ```
@@ -820,10 +903,12 @@ curl -X POST http://54.180.251.210:8080/api/v1/auth/logout \
 **Happy Coding! 🚀**
 
 **최종 업데이트**: 2025-12-22
-- ✅ **댓글 관리 기능 완전 복구** (CommentService, CommentController) ✨ NEW!
-- ✅ **Redis 연동 완료** (AWS ElastiCache 연결) ✨ NEW!
+- ✅ **좋아요 관리 기능 완전 복구** (PostLikeService, PostLikeController) ✨ NEW!
+- ✅ **댓글 관리 기능 완전 복구** (CommentService, CommentController)
+- ✅ **Redis 연동 완료** (AWS ElastiCache 연결)
+- ✅ 좋아요 토글, 상태 확인, 목록 조회 API 사용 가능
 - ✅ 댓글/대댓글 CRUD, 계층형 구조, 검색 API 사용 가능
 - ✅ 게시글 CRUD, 검색, 발행, 인기글, 트렌딩 API 사용 가능
 - ✅ QueryDSL 기반 복합 검색 및 동적 쿼리 정상 작동
-- ✅ 회원가입/로그인 → 게시글 작성 → 댓글 작성 전체 워크플로우 테스트 가능
+- ✅ 회원가입/로그인 → 게시글 작성 → 댓글 작성 → 좋아요 전체 워크플로우 테스트 가능
 - ✅ JWT 토큰 기반 인증 시스템 작동 확인

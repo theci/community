@@ -10,10 +10,12 @@ import lombok.Getter;
 @Builder
 public class LikeToggleResponse {
 
+    private Long postId; // 게시글 ID
+
     private Boolean isLiked; // 좋아요 상태 (true: 좋아요 추가, false: 좋아요 취소)
-    
+
     private Long totalLikeCount; // 전체 좋아요 수
-    
+
     private String message; // 결과 메시지
     
     /**
