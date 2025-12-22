@@ -1,6 +1,8 @@
 package com.community.platform.content.application;
 
 import com.community.platform.content.domain.*;
+import com.community.platform.content.exception.CommentNotFoundException;
+import com.community.platform.content.exception.PostNotFoundException;
 import com.community.platform.content.infrastructure.persistence.CommentRepository;
 import com.community.platform.content.infrastructure.persistence.PostRepository;
 import com.community.platform.user.exception.UserNotFoundException;
@@ -226,15 +228,6 @@ public class CommentService {
     private void validateAuthorPermission(Comment comment, Long userId) {
         if (!comment.getAuthorId().equals(userId)) {
             throw new IllegalArgumentException("댓글 작성자만 수정/삭제할 수 있습니다.");
-        }
-    }
-
-    /**
-     * 댓글을 찾을 수 없을 때 발생하는 예외
-     */
-    public static class CommentNotFoundException extends RuntimeException {
-        public CommentNotFoundException(Long commentId) {
-            super("댓글을 찾을 수 없습니다. ID: " + commentId);
         }
     }
 }

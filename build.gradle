@@ -88,12 +88,13 @@ tasks.named('compileJava') {
     exclude '**/engagement/presentation/web/PostLikeController.java'
     exclude '**/engagement/presentation/web/PostScrapController.java'
     exclude '**/engagement/presentation/web/ScrapFolderController.java'
-    exclude '**/content/presentation/web/CommentController.java'
-    // 게시글 관리 기능 활성화
+    // 댓글 관리 기능 활성화 (2025-12-22)
+    // exclude '**/content/presentation/web/CommentController.java'
+    // exclude '**/content/application/CommentService.java'
+    // 게시글 관리 기능 활성화 (2025-12-22)
     // exclude '**/content/presentation/web/PostController.java'
     // exclude '**/content/application/PostService.java'
     // exclude '**/content/infrastructure/persistence/PostRepositoryImpl.java'
-    exclude '**/content/application/CommentService.java'
 }
 
 hibernate {

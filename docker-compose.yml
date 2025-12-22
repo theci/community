@@ -17,6 +17,9 @@ services:
       - SPRING_DATASOURCE_PASSWORD=
       - SPRING_H2_CONSOLE_ENABLED=true
       - LOGGING_LEVEL_COM_COMMUNITY_PLATFORM=DEBUG
+      - SPRING_DATA_REDIS_HOST=test-0001-001.test.mxcsbc.apn2.cache.amazonaws.com
+      - SPRING_DATA_REDIS_PORT=6379
+      - SPRING_DATA_REDIS_SSL_ENABLED=false
     volumes:
       - ./logs:/app/logs
     restart: unless-stopped
@@ -54,6 +57,10 @@ services:
     container_name: community-redis
     ports:
       - "6379:6379"
+    environment:
+      - SPRING_REDIS_HOST=clustercfg.test.mxcsbc.apn2.cache.amazonaws.com
+      - SPRING_REDIS_PORT=6379
+      - SPRING_REDIS_SSL_ENABLED=false
     volumes:
       - redis_data:/data
     command: redis-server --appendonly yes

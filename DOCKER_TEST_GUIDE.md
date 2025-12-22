@@ -37,14 +37,15 @@
 ### 주요 기능
 ✅ **구현 완료**
 - **사용자 관리**: 회원가입, 로그인, JWT 인증
-- **게시글 관리**: CRUD, 검색, 발행, 인기글, 트렌딩 ✨ NEW!
+- **게시글 관리**: CRUD, 검색, 발행, 인기글, 트렌딩
+- **댓글 관리**: CRUD, 대댓글, 계층형 구조 ✨ NEW!
+- **Redis 연결**: AWS ElastiCache 연동 완료 ✨ NEW!
 - 카테고리 관리 (계층형 구조)
 - 태그 시스템
 - 스크랩 폴더 관리 (기본 CRUD)
 - Spring Security 설정
 
 ⚠️ **부분 구현** (컴파일 제외됨)
-- 댓글 관리 (CommentService)
 - 좋아요/스크랩 기능
 
 🔴 **미구현**
@@ -62,15 +63,9 @@
 
 **Controllers (표현 계층)**
 ```
-✗ CommentController.java
 ✗ PostLikeController.java
 ✗ PostScrapController.java
 ✗ ScrapFolderController.java
-```
-
-**Services (응용 계층)**
-```
-✗ CommentService.java
 ```
 
 ### ✅ 테스트 가능한 API
@@ -105,6 +100,20 @@
 #### 🏷️ **태그 API** (TagService)
 - **GET** `/api/v1/tags` - 태그 목록
 - **POST** `/api/v1/tags` - 태그 생성
+
+#### 💬 **댓글 API** (CommentController, CommentService) ✨ NEW!
+- **POST** `/api/v1/comments?currentUserId={userId}` - 댓글 작성 (인증 필요)
+- **GET** `/api/v1/comments/posts/{postId}` - 게시글의 댓글 목록 조회 (계층형)
+- **GET** `/api/v1/comments/posts/{postId}/root` - 게시글의 최상위 댓글만 조회
+- **GET** `/api/v1/comments/{commentId}` - 댓글 상세 조회
+- **GET** `/api/v1/comments/{parentCommentId}/replies` - 대댓글 목록 조회
+- **PUT** `/api/v1/comments/{commentId}?currentUserId={userId}` - 댓글 수정 (인증 필요)
+- **DELETE** `/api/v1/comments/{commentId}?currentUserId={userId}` - 댓글 삭제 (인증 필요)
+- **GET** `/api/v1/comments/author/{authorId}` - 작성자별 댓글 조회
+- **GET** `/api/v1/comments/search?keyword={keyword}` - 댓글 검색
+- **GET** `/api/v1/comments/recent` - 최근 댓글 조회 (관리자용)
+- **POST** `/api/v1/comments/{commentId}/block` - 댓글 차단 (관리자용)
+- **POST** `/api/v1/comments/{commentId}/restore` - 댓글 복원 (관리자용)
 
 #### 💊 **Health Check**
 - **GET** `/actuator/health` - 서버 상태 확인
@@ -333,6 +342,93 @@ curl "http://54.180.251.210:8080/api/v1/posts/category/1"
 curl http://54.180.251.210:8080/api/v1/posts/1
 ```
 
+### 8. 댓글 작성 및 조회 (댓글 기능) ✨ NEW!
+
+**댓글 작성 (인증 필요)**
+```bash
+# 1. 로그인하여 토큰 받기 (위 5번 참고)
+TOKEN=$(curl -s -X POST http://54.180.251.210:8080/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"test@example.com","password":"Password123@"}' \
+  | grep -o '"accessToken":"[^"]*' | cut -d'"' -f4)
+
+# 2. 최상위 댓글 작성
+curl -X POST "http://54.180.251.210:8080/api/v1/comments?currentUserId=1" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{
+    "postId": 1,
+    "content": "좋은 게시글이네요! 감사합니다."
+  }'
+
+# 3. 대댓글 작성 (parentCommentId 포함)
+curl -X POST "http://54.180.251.210:8080/api/v1/comments?currentUserId=1" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{
+    "postId": 1,
+    "parentCommentId": 1,
+    "content": "저도 동감합니다!"
+  }'
+```
+
+**응답 예시 (201 Created):**
+```json
+{
+  "success": true,
+  "data": {
+    "id": 1,
+    "postId": 1,
+    "parentCommentId": null,
+    "author": {
+      "id": 1,
+      "nickname": "testuser",
+      "email": "test@example.com"
+    },
+    "content": "좋은 게시글이네요! 감사합니다.",
+    "status": "ACTIVE",
+    "likeCount": 0,
+    "depth": 0,
+    "createdAt": "2025-12-22 12:00:00",
+    "updatedAt": "2025-12-22 12:00:00",
+    "replies": [],
+    "isLikedByUser": false,
+    "isAuthor": true
+  },
+  "message": "댓글이 작성되었습니다"
+}
+```
+
+**댓글 목록 조회 (인증 불필요)**
+```bash
+# 게시글의 모든 댓글 조회 (계층형 구조)
+curl "http://54.180.251.210:8080/api/v1/comments/posts/1"
+
+# 게시글의 최상위 댓글만 조회
+curl "http://54.180.251.210:8080/api/v1/comments/posts/1/root"
+
+# 특정 댓글의 대댓글 조회
+curl "http://54.180.251.210:8080/api/v1/comments/1/replies"
+
+# 댓글 상세 조회
+curl "http://54.180.251.210:8080/api/v1/comments/1"
+```
+
+**댓글 수정/삭제 (인증 필요)**
+```bash
+# 댓글 수정
+curl -X PUT "http://54.180.251.210:8080/api/v1/comments/1?currentUserId=1" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{
+    "content": "수정된 댓글 내용입니다."
+  }'
+
+# 댓글 삭제 (소프트 삭제)
+curl -X DELETE "http://54.180.251.210:8080/api/v1/comments/1?currentUserId=1" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
 ---
 
 ## 📝 Postman으로 테스트하기
@@ -408,30 +504,16 @@ Authorization: Bearer {{accessToken}}
 
 ### 🚧 다음 구현 단계
 
-#### Phase 1: 댓글 기능 복구 (우선순위 높음)
-
-**1. CommentService 복구**
-```java
-// 필요한 작업:
-- Exception import 수정 (CommentNotFoundException)
-- 컴파일 에러 확인 및 수정
-```
-
-**2. CommentController 복구**
-```java
-// 의존성: CommentService
-- 댓글 목록 조회 API
-- 댓글 작성 API (인증 필요)
-- 대댓글 작성 API (인증 필요)
-- 댓글 수정/삭제 API (인증 필요)
-```
-
-#### Phase 2: 좋아요/스크랩 기능 복구
+#### Phase 1: 좋아요/스크랩 기능 복구 (다음 우선순위)
 
 **PostLikeController, PostScrapController, ScrapFolderController 복구**
 - 각 Controller의 Service 의존성 확인
 - 누락된 메서드 구현
 - API 엔드포인트 테스트
+
+#### Phase 2: 고급 기능 구현
+
+**알림 시스템, 포인트/보상 시스템, 관리자 기능 등**
 
 ### 📋 기능별 체크리스트
 
@@ -461,12 +543,16 @@ Authorization: Bearer {{accessToken}}
 - [x] 유사 게시글 조회
 - [x] 공지사항 관리
 
-#### 댓글 관리
-- [ ] 댓글 목록 조회
-- [ ] 댓글 작성
-- [ ] 대댓글 작성
-- [ ] 댓글 수정
-- [ ] 댓글 삭제
+#### 댓글 관리 ✨ NEW!
+- [x] 댓글 목록 조회 (계층형 구조)
+- [x] 댓글 작성
+- [x] 대댓글 작성 (최대 2단계)
+- [x] 댓글 수정
+- [x] 댓글 삭제 (소프트 삭제)
+- [x] 댓글 상세 조회
+- [x] 작성자별 댓글 조회
+- [x] 댓글 검색
+- [x] 댓글 차단/복원 (관리자용)
 
 #### 참여 기능
 - [ ] 게시글 좋아요
@@ -477,12 +563,14 @@ Authorization: Bearer {{accessToken}}
 
 ## 🐛 문제 해결
 
-### Redis 연결 에러 (무시 가능)
-로그에 다음과 같은 에러가 표시되지만, 애플리케이션은 정상 작동합니다:
+### Redis 연결 상태 ✨ NEW!
+Redis는 AWS ElastiCache에 연결되어 있습니다:
 ```
-RedisConnectionFailureException: Unable to connect to Redis
+Host: test-0001-001.test.mxcsbc.apn2.cache.amazonaws.com
+Port: 6379
+SSL: Disabled
 ```
-Redis는 캐싱용 선택적 기능이므로, 없어도 모든 API가 정상 작동합니다.
+Redis는 캐싱용으로 사용되며, 세션 관리 및 성능 최적화에 활용됩니다.
 
 ### 서버가 재시작을 반복하는 경우
 ```bash
@@ -640,17 +728,22 @@ com.community.platform
 4. ✅ PostController 활성화
 5. ✅ 게시글 CRUD, 검색, 인기글 테스트 가능
 
-### 🚧 Phase 3: 참여 기능 복구 (다음 단계)
-1. [ ] CommentService 복구
-2. [ ] CommentController 활성화
-3. [ ] 좋아요/스크랩 Controller 활성화
-4. [ ] 전체 워크플로우 테스트
+### ✅ Phase 3: 댓글 기능 복구 (완료 - 2025-12-22) ✨ NEW!
+1. ✅ CommentService 복구 (Exception import 추가, 중복 클래스 제거)
+2. ✅ CommentController 활성화
+3. ✅ 댓글/대댓글 CRUD API 사용 가능
+4. ✅ 계층형 댓글 구조 지원
+5. ✅ Redis 연동 완료 (AWS ElastiCache)
+
+### 🚧 Phase 4: 참여 기능 복구 (다음 단계)
+1. [ ] 좋아요/스크랩 Controller 활성화
+2. [ ] 전체 워크플로우 테스트
 
 ---
 
 ## 🎉 테스트 시나리오
 
-### 현재 가능한 전체 워크플로우
+### 현재 가능한 전체 워크플로우 ✨ 댓글 기능 추가!
 
 ```bash
 # 1. 회원가입
@@ -664,12 +757,10 @@ TOKEN=$(curl -s -X POST http://54.180.251.210:8080/api/v1/auth/login \
   -d '{"email":"user1@test.com","password":"Test1234@"}' \
   | grep -o '"accessToken":"[^"]*' | cut -d'"' -f4)
 
-**카테고리 생성** (관리자용):
-```bash
+# 3. 카테고리 생성 (관리자용)
 curl -X POST "http://54.180.251.210:8080/api/v1/categories?name=General&description=General%20discussion%20board"
-```
 
-# 3. 게시글 작성
+# 4. 게시글 작성
 curl -X POST "http://54.180.251.210:8080/api/v1/posts?currentUserId=1" \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $TOKEN" \
@@ -681,25 +772,45 @@ curl -X POST "http://54.180.251.210:8080/api/v1/posts?currentUserId=1" \
     "tags": ["테스트", "DDD", "SpringBoot"]
   }'
 
-# 4. 게시글 발행
+# 5. 게시글 발행
 curl -X POST "http://54.180.251.210:8080/api/v1/posts/1/publish?currentUserId=1" \
   -H "Authorization: Bearer $TOKEN"
 
-# 5. 게시글 목록 조회 (인증 불필요)
+# 6. 게시글 목록 조회 (인증 불필요)
 curl "http://54.180.251.210:8080/api/v1/posts"
 
-# 6. 게시글 상세 조회 (조회수 증가)
+# 7. 게시글 상세 조회 (조회수 증가)
 curl "http://54.180.251.210:8080/api/v1/posts/1"
 
-# 7. 인기 게시글 조회
+# 8. 댓글 작성 ✨ NEW!
+curl -X POST "http://54.180.251.210:8080/api/v1/comments?currentUserId=1" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{
+    "postId": 1,
+    "content": "좋은 게시글이네요!"
+  }'
+
+# 9. 대댓글 작성 ✨ NEW!
+curl -X POST "http://54.180.251.210:8080/api/v1/comments?currentUserId=1" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{
+    "postId": 1,
+    "parentCommentId": 1,
+    "content": "저도 동감합니다!"
+  }'
+
+# 10. 댓글 목록 조회 (계층형) ✨ NEW!
+curl "http://54.180.251.210:8080/api/v1/comments/posts/1"
+
+# 11. 인기 게시글 조회
 curl "http://54.180.251.210:8080/api/v1/posts/popular?days=7"
 
-
-
-# 9. 카테고리 조회
+# 12. 카테고리 조회
 curl http://54.180.251.210:8080/api/v1/categories/tree
 
-# 10. 로그아웃
+# 13. 로그아웃
 curl -X POST http://54.180.251.210:8080/api/v1/auth/logout \
   -H "Authorization: Bearer $TOKEN"
 ```
@@ -709,8 +820,10 @@ curl -X POST http://54.180.251.210:8080/api/v1/auth/logout \
 **Happy Coding! 🚀**
 
 **최종 업데이트**: 2025-12-22
-- ✅ **게시글 관리 기능 완전 복구** (PostService, PostRepositoryImpl, PostController)
+- ✅ **댓글 관리 기능 완전 복구** (CommentService, CommentController) ✨ NEW!
+- ✅ **Redis 연동 완료** (AWS ElastiCache 연결) ✨ NEW!
+- ✅ 댓글/대댓글 CRUD, 계층형 구조, 검색 API 사용 가능
 - ✅ 게시글 CRUD, 검색, 발행, 인기글, 트렌딩 API 사용 가능
 - ✅ QueryDSL 기반 복합 검색 및 동적 쿼리 정상 작동
-- ✅ 회원가입/로그인 → 게시글 작성/조회 전체 워크플로우 테스트 가능
+- ✅ 회원가입/로그인 → 게시글 작성 → 댓글 작성 전체 워크플로우 테스트 가능
 - ✅ JWT 토큰 기반 인증 시스템 작동 확인

@@ -30,7 +30,7 @@ spring:
       
   data:
     redis:
-      host: localhost
+      host: clustercfg.test.mxcsbc.apn2.cache.amazonaws.com
       port: 6379
       timeout: 3000ms
       lettuce:
@@ -138,7 +138,7 @@ spring:
 
   data:
     redis:
-      host: localhost
+      host: clustercfg.test.mxcsbc.apn2.cache.amazonaws.com
       port: 6379
       timeout: 3000ms
       lettuce:
@@ -148,7 +148,7 @@ spring:
           min-idle: 0
 
   cache:
-    type: none  # Redis 연결 문제로 임시 비활성화
+    type: redis  # Redis 연결 문제로 임시 비활성화
         
 # Docker 환경용 JWT 설정
 jwt:
