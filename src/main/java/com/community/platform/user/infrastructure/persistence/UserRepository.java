@@ -1,5 +1,6 @@
 package com.community.platform.user.infrastructure.persistence;
 
+import com.community.platform.authorization.domain.UserRole;
 import com.community.platform.user.domain.User;
 import com.community.platform.user.domain.UserStatus;
 import org.springframework.data.domain.Page;
@@ -57,4 +58,18 @@ public interface UserRepository extends JpaRepository<User, Long> {
     // 특정 사용자들의 ID 목록으로 조회 (배치 처리용)
     @Query("SELECT u FROM User u WHERE u.id IN :userIds")
     List<User> findByIdIn(@Param("userIds") List<Long> userIds);
+
+    // ========== 역할(Role) 관련 메서드 (Phase 6-2) ==========
+
+    // 역할별 사용자 수 조회
+    long countByRole(UserRole role);
+
+    // 역할별 사용자 목록 조회
+    List<User> findByRole(UserRole role);
+
+    // 여러 역할의 사용자 목록 조회 (관리자 목록 등)
+    List<User> findByRoleIn(List<UserRole> roles);
+
+    // 역할별 사용자 목록 조회 (페이징)
+    Page<User> findByRole(UserRole role, Pageable pageable);
 }

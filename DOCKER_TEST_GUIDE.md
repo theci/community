@@ -42,13 +42,13 @@
 - **좋아요 관리**: 게시글 좋아요/취소, 좋아요 목록 조회
 - **스크랩 관리**: 게시글 스크랩, 스크랩 폴더 관리
 - **포인트 시스템**: 포인트 적립/사용, 레벨 시스템, 랭킹 ✨ NEW!
+- **역할 기반 접근 제어**: 5단계 역할, 29개 세부 권한, 자동 승격 ✨ NEW!
 - **Redis 연결**: AWS ElastiCache 연동 완료
 - 카테고리 관리 (계층형 구조)
 - 태그 시스템
 - Spring Security 설정
 
 🚧 **진행 중** (Phase 6)
-- 역할 기반 접근 제어 (RBAC)
 - 신고 관리 시스템
 - 콘텐츠 필터링
 - 공지사항 & 큐레이션
@@ -151,6 +151,19 @@
 - **POST** `/api/v1/points/admin/adjust?currentUserId={adminId}` - 포인트 지급/차감 (관리자 전용)
 - **GET** `/api/v1/points/admin/users/{userId}` - 사용자 포인트 조회 (관리자 전용)
 - **GET** `/api/v1/points/admin/users/level/{level}` - 레벨별 사용자 조회 (관리자 전용)
+
+#### 👑 **역할 및 권한 API** (RoleController, RoleService) ✨ NEW!
+- **GET** `/api/v1/roles` - 모든 역할 정보 조회
+- **GET** `/api/v1/roles/{role}` - 특정 역할 정보 조회
+- **GET** `/api/v1/roles/permissions` - 모든 권한 정보 조회
+- **GET** `/api/v1/roles/{role}/permissions` - 특정 역할의 권한 목록
+- **GET** `/api/v1/roles/check-permission?userId={id}&permission={perm}` - 사용자 권한 확인
+- **GET** `/api/v1/roles/statistics` - 역할별 사용자 통계
+
+#### 👑 **관리자 역할 관리 API** ✨ NEW!
+- **POST** `/api/v1/roles/admin/change?currentUserId={adminId}` - 사용자 역할 변경 (관리자 전용)
+- **GET** `/api/v1/roles/admin/{role}/users` - 역할별 사용자 목록 (관리자 전용)
+- **GET** `/api/v1/roles/admin/admins` - 관리자 목록 조회 (관리자 전용)
 
 #### 💊 **Health Check**
 - **GET** `/actuator/health` - 서버 상태 확인
@@ -752,6 +765,136 @@ curl "http://54.180.251.210:8080/api/v1/points/admin/users/2"
 curl "http://54.180.251.210:8080/api/v1/points/admin/users/level/LEVEL_5"
 ```
 
+### 13. 역할 및 권한 관리 테스트 (RBAC) ✨ NEW!
+
+**역할 및 권한 정보 조회 (인증 불필요)**
+```bash
+# 1. 모든 역할 정보 조회
+curl "http://54.180.251.210:8080/api/v1/roles"
+
+# 2. 특정 역할 상세 정보 조회
+curl "http://54.180.251.210:8080/api/v1/roles/MODERATOR"
+
+# 3. 모든 권한 정보 조회
+curl "http://54.180.251.210:8080/api/v1/roles/permissions"
+
+# 4. 특정 역할의 권한 목록 조회
+curl "http://54.180.251.210:8080/api/v1/roles/ADMIN/permissions"
+
+# 5. 역할별 사용자 통계
+curl "http://54.180.251.210:8080/api/v1/roles/statistics"
+```
+
+**응답 예시 (역할 정보):**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "role": "USER",
+      "displayName": "일반 유저",
+      "description": "기본 권한을 가진 일반 사용자",
+      "minimumLevel": 0,
+      "permissions": ["POST_READ", "POST_CREATE", "POST_UPDATE_OWN", "..."],
+      "userCount": 150
+    },
+    {
+      "role": "POWER_USER",
+      "displayName": "파워 유저",
+      "description": "높은 레벨의 활동적인 사용자 (레벨 7+)",
+      "minimumLevel": 7,
+      "permissions": ["POST_READ", "POST_CREATE", "POST_UPDATE_OWN", "..."],
+      "userCount": 25
+    },
+    {
+      "role": "MODERATOR",
+      "displayName": "부관리자",
+      "description": "콘텐츠 관리 및 신고 처리 권한",
+      "minimumLevel": 0,
+      "permissions": ["POST_UPDATE_ALL", "POST_DELETE_ALL", "REPORT_MANAGE", "..."],
+      "userCount": 5
+    }
+  ]
+}
+```
+
+**사용자 권한 확인**
+```bash
+# 로그인하여 토큰 받기
+TOKEN=$(curl -s -X POST http://54.180.251.210:8080/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"test@example.com","password":"Password123@"}' \
+  | grep -o '"accessToken":"[^"]*' | cut -d'"' -f4)
+
+# 특정 사용자의 특정 권한 확인
+curl "http://54.180.251.210:8080/api/v1/roles/check-permission?userId=1&permission=POST_DELETE_ALL"
+```
+
+**응답 예시 (권한 확인):**
+```json
+{
+  "success": true,
+  "data": {
+    "userId": 1,
+    "permission": "POST_DELETE_ALL",
+    "hasPermission": false,
+    "message": "권한이 없습니다"
+  }
+}
+```
+
+**관리자 역할 관리 (관리자 전용)**
+```bash
+# 1. 사용자 역할 변경 (관리자만 가능)
+curl -X POST "http://54.180.251.210:8080/api/v1/roles/admin/change?currentUserId=1" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{
+    "targetUserId": 2,
+    "newRole": "MODERATOR"
+  }'
+
+# 2. 특정 역할의 사용자 목록 조회
+curl "http://54.180.251.210:8080/api/v1/roles/admin/MODERATOR/users" \
+  -H "Authorization: Bearer $TOKEN"
+
+# 3. 관리자 목록 조회
+curl "http://54.180.251.210:8080/api/v1/roles/admin/admins" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+**응답 예시 (역할 변경 성공):**
+```json
+{
+  "success": true,
+  "data": null,
+  "message": "역할이 변경되었습니다",
+  "timestamp": "2025-12-22T16:00:00"
+}
+```
+
+**역할 자동 승격 시나리오:**
+```bash
+# 시나리오: 사용자가 LEVEL 7에 도달하면 자동으로 POWER_USER로 승격
+# 1. 사용자 포인트 조회 (현재 LEVEL 6, USER 역할)
+curl "http://54.180.251.210:8080/api/v1/points/me?currentUserId=2"
+# → totalPoints: 7500, currentLevel: LEVEL_6
+
+# 2. 관리자가 포인트 지급 (LEVEL 7로 상승)
+curl -X POST "http://54.180.251.210:8080/api/v1/points/admin/adjust?currentUserId=1" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{
+    "targetUserId": 2,
+    "points": 1000,
+    "reason": "활동 보상"
+  }'
+
+# 3. 포인트 재조회 (LEVEL 7 달성, 자동으로 POWER_USER로 승격됨)
+curl "http://54.180.251.210:8080/api/v1/points/me?currentUserId=2"
+# → totalPoints: 8500, currentLevel: LEVEL_7, role: POWER_USER
+```
+
 ---
 
 ## 📝 Postman으로 테스트하기
@@ -1084,7 +1227,7 @@ com.community.platform
 4. ✅ 스크랩 추가/취소, 폴더 관리 API 사용 가능
 5. ✅ 스크랩 검색, 폴더 이동, 통계 조회 기능
 
-### 🚧 Phase 6-1: 보상 시스템 - 포인트 & 레벨 (진행 중 - 2025-12-22) ✨ NEW!
+### ✅ Phase 6-1: 보상 시스템 - 포인트 & 레벨 (완료 - 2025-12-22)
 1. ✅ 도메인 모델 설계 (UserPoint, UserLevel, PointTransaction)
 2. ✅ 레벨 시스템 구현 (10단계 레벨, 포인트 구간별 분류)
 3. ✅ 포인트 적립/차감/사용 기능
@@ -1092,7 +1235,32 @@ com.community.platform
 5. ✅ 포인트 거래 내역 추적
 6. ✅ 포인트 랭킹 및 통계 기능
 7. ✅ 관리자 포인트 지급/차감 기능
-8. ⏳ 게시글/댓글 작성 시 자동 포인트 적립 (다음 단계)
+
+### ✅ Phase 6-2: RBAC - 역할 기반 접근 제어 (완료 - 2025-12-22) ✨ NEW!
+1. ✅ UserRole enum 구현 (5단계 역할 시스템)
+2. ✅ Permission enum 구현 (29개 세부 권한)
+3. ✅ User 엔티티에 role 필드 추가
+4. ✅ 레벨 기반 자동 역할 승격 (LEVEL 7+ → POWER_USER)
+5. ✅ 역할 관리 서비스 및 API
+6. ✅ 권한 확인 및 검증 기능
+7. ✅ 관리자 역할 변경 기능
+8. ⏳ Spring Security 통합 (다음 단계)
+
+**역할 시스템 (5단계):**
+- **USER** (일반 유저): 기본 권한 (게시글/댓글 읽기, 작성, 자신의 콘텐츠 수정/삭제, 좋아요, 스크랩, 신고)
+- **POWER_USER** (파워 유저): LEVEL 7+ 자동 승격, 일반 유저 권한 포함
+- **MODERATOR** (부관리자): 콘텐츠 관리 권한 (모든 게시글/댓글 수정/삭제, 신고 관리, 콘텐츠 필터 관리)
+- **ADMIN** (운영자): 시스템 관리 권한 (사용자 관리, 역할 변경, 포인트 관리, 공지 관리, 카테고리 관리, 통계 조회)
+- **SUPER_ADMIN** (최고 관리자): 모든 권한 (시스템 전체 제어)
+
+**권한 카테고리 (29개 세부 권한):**
+- 게시글: READ, CREATE, UPDATE_OWN, DELETE_OWN, UPDATE_ALL, DELETE_ALL, PIN, RECOMMEND
+- 댓글: READ, CREATE, UPDATE_OWN, DELETE_OWN, UPDATE_ALL, DELETE_ALL
+- 참여: LIKE_CREATE, SCRAP_CREATE
+- 신고: REPORT_CREATE, REPORT_MANAGE
+- 사용자 관리: USER_MANAGE, USER_BLOCK, USER_TEMP_BLOCK
+- 시스템: ROLE_ASSIGN, POINT_MANAGE, CONTENT_FILTER_MANAGE, NOTICE_MANAGE, CATEGORY_MANAGE, STATISTICS_VIEW
+- 특별: ALL (모든 권한)
 
 **레벨 시스템:**
 - LEVEL_1 (새싹): 0-99 포인트
@@ -1230,10 +1398,14 @@ curl -X POST http://54.180.251.210:8080/api/v1/auth/logout \
 **Happy Coding! 🚀**
 
 **최종 업데이트**: 2025-12-22
-- ✅ **스크랩 관리 기능 완전 복구** (PostScrapService, ScrapFolderService, Controllers) ✨ NEW!
+- ✅ **역할 기반 접근 제어 (RBAC) 시스템 완료** (UserRole, Permission, RoleService, RoleController) ✨ NEW!
+- ✅ **포인트 & 레벨 시스템 완료** (UserPoint, UserLevel, PointService, PointController) ✨ NEW!
+- ✅ **스크랩 관리 기능 완전 복구** (PostScrapService, ScrapFolderService, Controllers)
 - ✅ **좋아요 관리 기능 완전 복구** (PostLikeService, PostLikeController)
 - ✅ **댓글 관리 기능 완전 복구** (CommentService, CommentController)
 - ✅ **Redis 연동 완료** (AWS ElastiCache 연결)
+- ✅ RBAC: 5단계 역할 시스템, 29개 세부 권한, 레벨 기반 자동 승격
+- ✅ 포인트: 10단계 레벨, 일일 한도, 거래 내역, 랭킹, 관리자 지급/차감
 - ✅ 스크랩 추가/취소, 폴더 관리, 검색, 통계 API 사용 가능
 - ✅ 좋아요 토글, 상태 확인, 목록 조회 API 사용 가능
 - ✅ 댓글/대댓글 CRUD, 계층형 구조, 검색 API 사용 가능

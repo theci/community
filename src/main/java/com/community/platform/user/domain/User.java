@@ -1,5 +1,7 @@
 package com.community.platform.user.domain;
 
+import com.community.platform.authorization.domain.Permission;
+import com.community.platform.authorization.domain.UserRole;
 import com.community.platform.shared.domain.AggregateRoot;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
@@ -17,7 +19,8 @@ import java.time.LocalDateTime;
        indexes = {
            @Index(name = "idx_user_email", columnList = "email"),
            @Index(name = "idx_user_nickname", columnList = "nickname"),
-           @Index(name = "idx_user_status_created_at", columnList = "status, created_at")
+           @Index(name = "idx_user_status_created_at", columnList = "status, created_at"),
+           @Index(name = "idx_user_role", columnList = "role")
        })
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -35,6 +38,10 @@ public class User extends AggregateRoot {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private UserStatus status = UserStatus.ACTIVE;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private UserRole role = UserRole.USER;
 
     @Column(name = "last_login_at")
     private LocalDateTime lastLoginAt;
@@ -82,6 +89,60 @@ public class User extends AggregateRoot {
 
     public boolean isBlocked() {
         return this.status == UserStatus.BLOCKED;
+    }
+
+    /**
+     * 역할 변경 (관리자만 가능)
+     */
+    public void changeRole(UserRole newRole) {
+        if (newRole == null) {
+            throw new IllegalArgumentException("역할은 필수입니다.");
+        }
+        this.role = newRole;
+    }
+
+    /**
+     * 레벨 기반 자동 역할 승격
+     */
+    public void checkAndPromoteRole(int currentLevel) {
+        if (UserRole.canAutoPromote(currentLevel, this.role)) {
+            this.role = UserRole.getAutoPromotedRole(currentLevel, this.role);
+        }
+    }
+
+    /**
+     * 특정 권한 보유 여부 확인
+     */
+    public boolean hasPermission(Permission permission) {
+        return this.role.hasPermission(permission);
+    }
+
+    /**
+     * 여러 권한 중 하나라도 보유하는지 확인
+     */
+    public boolean hasAnyPermission(Permission... permissions) {
+        return this.role.hasAnyPermission(permissions);
+    }
+
+    /**
+     * 모든 권한을 보유하는지 확인
+     */
+    public boolean hasAllPermissions(Permission... permissions) {
+        return this.role.hasAllPermissions(permissions);
+    }
+
+    /**
+     * 관리자 여부 확인
+     */
+    public boolean isAdmin() {
+        return this.role == UserRole.ADMIN || this.role == UserRole.SUPER_ADMIN;
+    }
+
+    /**
+     * 모더레이터 이상 여부 확인
+     */
+    public boolean isModerator() {
+        return this.role == UserRole.MODERATOR || isAdmin();
     }
 
     private static void validateEmail(String email) {
