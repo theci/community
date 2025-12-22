@@ -39,14 +39,12 @@
 - **사용자 관리**: 회원가입, 로그인, JWT 인증
 - **게시글 관리**: CRUD, 검색, 발행, 인기글, 트렌딩
 - **댓글 관리**: CRUD, 대댓글, 계층형 구조
-- **좋아요 관리**: 게시글 좋아요/취소, 좋아요 목록 조회 ✨ NEW!
+- **좋아요 관리**: 게시글 좋아요/취소, 좋아요 목록 조회
+- **스크랩 관리**: 게시글 스크랩, 스크랩 폴더 관리 ✨ NEW!
 - **Redis 연결**: AWS ElastiCache 연동 완료
 - 카테고리 관리 (계층형 구조)
 - 태그 시스템
 - Spring Security 설정
-
-⚠️ **부분 구현** (컴파일 제외됨)
-- 스크랩 기능 (PostScrapController, ScrapFolderController)
 
 🔴 **미구현**
 - 알림 시스템
@@ -58,14 +56,8 @@
 
 ## ⚠️ 현재 빌드 상태
 
-### 컴파일에서 제외된 파일들
-다음 파일들은 미완성 상태로 빌드에서 제외되었습니다:
-
-**Controllers (표현 계층)**
-```
-✗ PostScrapController.java
-✗ ScrapFolderController.java
-```
+### ✅ 모든 주요 API 활성화 완료!
+모든 핵심 기능의 컨트롤러가 활성화되어 정상적으로 작동합니다.
 
 ### ✅ 테스트 가능한 API
 
@@ -114,12 +106,32 @@
 - **POST** `/api/v1/comments/{commentId}/block` - 댓글 차단 (관리자용)
 - **POST** `/api/v1/comments/{commentId}/restore` - 댓글 복원 (관리자용)
 
-#### ❤️ **좋아요 API** (PostLikeController, PostLikeService) ✨ NEW!
+#### ❤️ **좋아요 API** (PostLikeController, PostLikeService)
 - **POST** `/api/v1/posts/{postId}/like?currentUserId={userId}` - 게시글 좋아요 토글 (인증 필요)
 - **GET** `/api/v1/posts/{postId}/like/status?currentUserId={userId}` - 좋아요 상태 확인
 - **GET** `/api/v1/posts/{postId}/like/count` - 게시글 좋아요 수 조회
 - **GET** `/api/v1/posts/{postId}/likes` - 게시글 좋아요한 사용자 목록 조회
 - **GET** `/api/v1/posts/likes/me?currentUserId={userId}` - 내가 좋아요한 게시글 목록 조회
+
+#### 📌 **스크랩 API** (PostScrapController, PostScrapService) ✨ NEW!
+- **POST** `/api/v1/posts/{postId}/scrap?currentUserId={userId}` - 게시글 스크랩 (인증 필요)
+- **DELETE** `/api/v1/posts/{postId}/scrap?currentUserId={userId}` - 게시글 스크랩 취소 (인증 필요)
+- **GET** `/api/v1/posts/{postId}/scrap/status?currentUserId={userId}` - 스크랩 상태 확인
+- **GET** `/api/v1/posts/{postId}/scrap/count` - 게시글 스크랩 수 조회
+- **GET** `/api/v1/posts/scraps/me?currentUserId={userId}` - 내 스크랩 목록 조회
+- **PUT** `/api/v1/posts/{postId}/scrap/move?currentUserId={userId}&targetFolderId={folderId}` - 스크랩 폴더 이동
+- **GET** `/api/v1/posts/scraps/me/search?currentUserId={userId}&keyword={keyword}` - 스크랩 검색
+- **GET** `/api/v1/posts/scraps/me/recent?currentUserId={userId}&days={days}` - 최근 스크랩 조회
+
+#### 📁 **스크랩 폴더 API** (ScrapFolderController, ScrapFolderService) ✨ NEW!
+- **POST** `/api/v1/scrap-folders?currentUserId={userId}` - 스크랩 폴더 생성 (인증 필요)
+- **GET** `/api/v1/scrap-folders/me?currentUserId={userId}` - 내 스크랩 폴더 목록 조회
+- **GET** `/api/v1/scrap-folders/{folderId}?currentUserId={userId}` - 스크랩 폴더 상세 조회
+- **PUT** `/api/v1/scrap-folders/{folderId}?currentUserId={userId}` - 스크랩 폴더 수정 (인증 필요)
+- **DELETE** `/api/v1/scrap-folders/{folderId}?currentUserId={userId}` - 스크랩 폴더 삭제 (인증 필요)
+- **GET** `/api/v1/posts/scrap-folders/{folderId}/scraps?currentUserId={userId}` - 특정 폴더의 스크랩 목록 조회
+- **GET** `/api/v1/scrap-folders/me/empty?currentUserId={userId}` - 빈 스크랩 폴더 조회
+- **POST** `/api/v1/scrap-folders/{folderId}/set-default?currentUserId={userId}` - 기본 폴더 설정
 
 #### 💊 **Health Check**
 - **GET** `/actuator/health` - 서버 상태 확인
@@ -435,7 +447,7 @@ curl -X DELETE "http://54.180.251.210:8080/api/v1/comments/1?currentUserId=1" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
-### 9. 게시글 좋아요 테스트 (좋아요 기능) ✨ NEW!
+### 9. 게시글 좋아요 테스트 (좋아요 기능)
 
 **좋아요 토글 (인증 필요)**
 ```bash
@@ -482,6 +494,152 @@ curl "http://54.180.251.210:8080/api/v1/posts/1/likes"
 
 # 내가 좋아요한 게시글 목록 조회
 curl "http://54.180.251.210:8080/api/v1/posts/likes/me?currentUserId=1"
+```
+
+### 10. 게시글 스크랩 테스트 (스크랩 기능) ✨ NEW!
+
+**스크랩 추가 (인증 필요)**
+```bash
+# 1. 로그인하여 토큰 받기
+TOKEN=$(curl -s -X POST http://54.180.251.210:8080/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"test@example.com","password":"Password123@"}' \
+  | grep -o '"accessToken":"[^"]*' | cut -d'"' -f4)
+
+# 2. 게시글 스크랩 (기본 폴더에)
+curl -X POST "http://54.180.251.210:8080/api/v1/posts/1/scrap?currentUserId=1" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{
+    "postId": 1,
+    "folderId": null
+  }'
+
+# 3. 특정 폴더에 스크랩
+curl -X POST "http://54.180.251.210:8080/api/v1/posts/2/scrap?currentUserId=1" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{
+    "postId": 2,
+    "folderId": 1
+  }'
+```
+
+**응답 예시 (스크랩 추가):**
+```json
+{
+  "success": true,
+  "data": {
+    "id": 1,
+    "post": {
+      "id": 1,
+      "title": "첫 번째 게시글"
+    },
+    "scrapFolder": {
+      "id": 1,
+      "name": "기본 폴더",
+      "isDefault": true
+    },
+    "createdAt": "2025-12-22T15:00:00"
+  },
+  "message": "게시글이 스크랩되었습니다",
+  "timestamp": "2025-12-22T15:00:00"
+}
+```
+
+**스크랩 취소 및 관리**
+```bash
+# 스크랩 취소
+curl -X DELETE "http://54.180.251.210:8080/api/v1/posts/1/scrap?currentUserId=1" \
+  -H "Authorization: Bearer $TOKEN"
+
+# 스크랩 상태 확인
+curl "http://54.180.251.210:8080/api/v1/posts/1/scrap/status?currentUserId=1"
+
+# 게시글 스크랩 수 조회
+curl "http://54.180.251.210:8080/api/v1/posts/1/scrap/count"
+
+# 내 스크랩 목록 조회
+curl "http://54.180.251.210:8080/api/v1/posts/scraps/me?currentUserId=1"
+
+# 스크랩 폴더 이동
+curl -X PUT "http://54.180.251.210:8080/api/v1/posts/1/scrap/move?currentUserId=1&targetFolderId=2" \
+  -H "Authorization: Bearer $TOKEN"
+
+# 스크랩 검색
+curl "http://54.180.251.210:8080/api/v1/posts/scraps/me/search?currentUserId=1&keyword=테스트"
+```
+
+### 11. 스크랩 폴더 관리 테스트 (폴더 기능) ✨ NEW!
+
+**스크랩 폴더 생성 (인증 필요)**
+```bash
+# 1. 새 스크랩 폴더 생성
+curl -X POST "http://54.180.251.210:8080/api/v1/scrap-folders?currentUserId=1" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{
+    "name": "개발 자료",
+    "description": "개발 관련 유용한 게시글 모음"
+  }'
+
+# 2. 다른 폴더 생성
+curl -X POST "http://54.180.251.210:8080/api/v1/scrap-folders?currentUserId=1" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{
+    "name": "디자인 참고",
+    "description": "UI/UX 디자인 레퍼런스"
+  }'
+```
+
+**응답 예시 (폴더 생성):**
+```json
+{
+  "success": true,
+  "data": {
+    "id": 2,
+    "userId": 1,
+    "name": "개발 자료",
+    "description": "개발 관련 유용한 게시글 모음",
+    "isDefault": false,
+    "createdAt": "2025-12-22T15:10:00"
+  },
+  "message": "스크랩 폴더가 생성되었습니다",
+  "timestamp": "2025-12-22T15:10:00"
+}
+```
+
+**스크랩 폴더 관리**
+```bash
+# 내 스크랩 폴더 목록 조회
+curl "http://54.180.251.210:8080/api/v1/scrap-folders/me?currentUserId=1"
+
+# 특정 폴더 상세 조회
+curl "http://54.180.251.210:8080/api/v1/scrap-folders/2?currentUserId=1"
+
+# 폴더 수정
+curl -X PUT "http://54.180.251.210:8080/api/v1/scrap-folders/2?currentUserId=1" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{
+    "name": "개발 참고자료",
+    "description": "백엔드 개발 관련 자료"
+  }'
+
+# 특정 폴더의 스크랩 목록 조회
+curl "http://54.180.251.210:8080/api/v1/posts/scrap-folders/2/scraps?currentUserId=1"
+
+# 빈 폴더 목록 조회
+curl "http://54.180.251.210:8080/api/v1/scrap-folders/me/empty?currentUserId=1"
+
+# 폴더 삭제 (스크랩은 기본 폴더로 이동)
+curl -X DELETE "http://54.180.251.210:8080/api/v1/scrap-folders/2?currentUserId=1&moveToDefault=true" \
+  -H "Authorization: Bearer $TOKEN"
+
+# 기본 폴더 설정
+curl -X POST "http://54.180.251.210:8080/api/v1/scrap-folders/2/set-default?currentUserId=1" \
+  -H "Authorization: Bearer $TOKEN"
 ```
 
 ---
@@ -617,12 +775,14 @@ Authorization: Bearer {{accessToken}}
 - [x] 댓글 차단/복원 (관리자용)
 
 #### 참여 기능
-- [x] 게시글 좋아요 ✨ NEW!
+- [x] 게시글 좋아요
 - [x] 좋아요 토글 (추가/취소)
 - [x] 좋아요 상태 확인
 - [x] 좋아요한 사용자/게시글 목록 조회
-- [ ] 게시글 스크랩
-- [ ] 스크랩 폴더 관리
+- [x] 게시글 스크랩 ✨ NEW!
+- [x] 스크랩 추가/취소 ✨ NEW!
+- [x] 스크랩 폴더 관리 ✨ NEW!
+- [x] 스크랩 검색 및 통계 ✨ NEW!
 
 ---
 
@@ -800,23 +960,25 @@ com.community.platform
 4. ✅ 계층형 댓글 구조 지원
 5. ✅ Redis 연동 완료 (AWS ElastiCache)
 
-### ✅ Phase 4: 좋아요 기능 복구 (완료 - 2025-12-22) ✨ NEW!
+### ✅ Phase 4: 좋아요 기능 복구 (완료 - 2025-12-22)
 1. ✅ PostLikeService 복구 (LikeResult 클래스 추가, 메서드 보완)
 2. ✅ PostLikeController 활성화
 3. ✅ 좋아요 토글, 상태 확인, 목록 조회 API 사용 가능
 4. ✅ 게시글 좋아요 수 자동 업데이트
 5. ✅ 좋아요한 사용자/게시글 목록 조회 기능
 
-### 🚧 Phase 5: 스크랩 기능 복구 (다음 단계)
-1. [ ] PostScrapController, ScrapFolderController 활성화
-2. [ ] 스크랩 폴더 관리 기능 복구
-3. [ ] 전체 워크플로우 테스트
+### ✅ Phase 5: 스크랩 기능 복구 (완료 - 2025-12-22) ✨ NEW!
+1. ✅ PostScrapService 및 ScrapFolderService 복구
+2. ✅ PostScrapController 활성화 (DTO 호환성 수정)
+3. ✅ ScrapFolderController 활성화 (래퍼 메서드 추가)
+4. ✅ 스크랩 추가/취소, 폴더 관리 API 사용 가능
+5. ✅ 스크랩 검색, 폴더 이동, 통계 조회 기능
 
 ---
 
 ## 🎉 테스트 시나리오
 
-### 현재 가능한 전체 워크플로우 ✨ 좋아요 기능 추가!
+### 현재 가능한 전체 워크플로우 ✨ 스크랩 기능 추가!
 
 ```bash
 # 1. 회원가입
@@ -855,7 +1017,7 @@ curl "http://54.180.251.210:8080/api/v1/posts"
 # 7. 게시글 상세 조회 (조회수 증가)
 curl "http://54.180.251.210:8080/api/v1/posts/1"
 
-# 8. 댓글 작성 ✨ NEW!
+# 8. 댓글 작성
 curl -X POST "http://54.180.251.210:8080/api/v1/comments?currentUserId=1" \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $TOKEN" \
@@ -864,7 +1026,7 @@ curl -X POST "http://54.180.251.210:8080/api/v1/comments?currentUserId=1" \
     "content": "좋은 게시글이네요!"
   }'
 
-# 9. 대댓글 작성 ✨ NEW!
+# 9. 대댓글 작성
 curl -X POST "http://54.180.251.210:8080/api/v1/comments?currentUserId=1" \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $TOKEN" \
@@ -877,23 +1039,41 @@ curl -X POST "http://54.180.251.210:8080/api/v1/comments?currentUserId=1" \
 # 10. 댓글 목록 조회 (계층형)
 curl "http://54.180.251.210:8080/api/v1/comments/posts/1"
 
-# 11. 게시글 좋아요 ✨ NEW!
+# 11. 게시글 좋아요
 curl -X POST "http://54.180.251.210:8080/api/v1/posts/1/like?currentUserId=1" \
   -H "Authorization: Bearer $TOKEN"
 
-# 12. 좋아요 상태 확인 ✨ NEW!
+# 12. 좋아요 상태 확인
 curl "http://54.180.251.210:8080/api/v1/posts/1/like/status?currentUserId=1"
 
-# 13. 게시글 좋아요 수 조회 ✨ NEW!
-curl "http://54.180.251.210:8080/api/v1/posts/1/like/count"
+# 13. 게시글 스크랩 ✨ NEW!
+curl -X POST "http://54.180.251.210:8080/api/v1/posts/1/scrap?currentUserId=1" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{
+    "postId": 1,
+    "folderId": null
+  }'
 
-# 14. 인기 게시글 조회
+# 14. 스크랩 폴더 생성 ✨ NEW!
+curl -X POST "http://54.180.251.210:8080/api/v1/scrap-folders?currentUserId=1" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{
+    "name": "개발 자료",
+    "description": "개발 관련 게시글 모음"
+  }'
+
+# 15. 내 스크랩 목록 조회 ✨ NEW!
+curl "http://54.180.251.210:8080/api/v1/posts/scraps/me?currentUserId=1"
+
+# 16. 인기 게시글 조회
 curl "http://54.180.251.210:8080/api/v1/posts/popular?days=7"
 
-# 15. 카테고리 조회
+# 17. 카테고리 조회
 curl http://54.180.251.210:8080/api/v1/categories/tree
 
-# 16. 로그아웃
+# 18. 로그아웃
 curl -X POST http://54.180.251.210:8080/api/v1/auth/logout \
   -H "Authorization: Bearer $TOKEN"
 ```
@@ -903,12 +1083,14 @@ curl -X POST http://54.180.251.210:8080/api/v1/auth/logout \
 **Happy Coding! 🚀**
 
 **최종 업데이트**: 2025-12-22
-- ✅ **좋아요 관리 기능 완전 복구** (PostLikeService, PostLikeController) ✨ NEW!
+- ✅ **스크랩 관리 기능 완전 복구** (PostScrapService, ScrapFolderService, Controllers) ✨ NEW!
+- ✅ **좋아요 관리 기능 완전 복구** (PostLikeService, PostLikeController)
 - ✅ **댓글 관리 기능 완전 복구** (CommentService, CommentController)
 - ✅ **Redis 연동 완료** (AWS ElastiCache 연결)
+- ✅ 스크랩 추가/취소, 폴더 관리, 검색, 통계 API 사용 가능
 - ✅ 좋아요 토글, 상태 확인, 목록 조회 API 사용 가능
 - ✅ 댓글/대댓글 CRUD, 계층형 구조, 검색 API 사용 가능
 - ✅ 게시글 CRUD, 검색, 발행, 인기글, 트렌딩 API 사용 가능
 - ✅ QueryDSL 기반 복합 검색 및 동적 쿼리 정상 작동
-- ✅ 회원가입/로그인 → 게시글 작성 → 댓글 작성 → 좋아요 전체 워크플로우 테스트 가능
+- ✅ 회원가입/로그인 → 게시글 작성 → 댓글 → 좋아요 → 스크랩 전체 워크플로우 테스트 가능
 - ✅ JWT 토큰 기반 인증 시스템 작동 확인

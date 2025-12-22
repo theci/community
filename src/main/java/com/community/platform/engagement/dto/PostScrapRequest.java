@@ -17,4 +17,9 @@ public class PostScrapRequest {
     private Long postId; // 게시글 ID
 
     private Long folderId; // 스크랩 폴더 ID (null이면 기본 폴더)
+
+    // Controller 호환성을 위한 별칭 getter
+    public Long getScrapFolderId() {
+        return this.folderId;
+    }
 }

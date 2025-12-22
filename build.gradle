@@ -87,8 +87,9 @@ tasks.withType(JavaCompile) {
 tasks.named('compileJava') {
     // 좋아요 기능 활성화 (2025-12-22)
     // exclude '**/engagement/presentation/web/PostLikeController.java'
-    exclude '**/engagement/presentation/web/PostScrapController.java'
-    exclude '**/engagement/presentation/web/ScrapFolderController.java'
+    // 스크랩 기능 활성화 (2025-12-22)
+    // exclude '**/engagement/presentation/web/PostScrapController.java'
+    // exclude '**/engagement/presentation/web/ScrapFolderController.java'
     // 댓글 관리 기능 활성화 (2025-12-22)
     // exclude '**/content/presentation/web/CommentController.java'
     // exclude '**/content/application/CommentService.java'

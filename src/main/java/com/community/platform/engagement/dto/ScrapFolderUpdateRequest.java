@@ -20,4 +20,6 @@ public class ScrapFolderUpdateRequest {
 
     @Size(max = 500, message = "폴더 설명은 500자를 초과할 수 없습니다")
     private String description; // 폴더 설명
+
+    private Boolean isPublic; // 공개 여부 (현재 미구현, 향후 확장용)
 }

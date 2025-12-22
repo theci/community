@@ -2,6 +2,7 @@ package com.community.platform.engagement.application;
 
 import com.community.platform.engagement.domain.PostScrap;
 import com.community.platform.engagement.domain.ScrapFolder;
+import com.community.platform.engagement.exception.ScrapFolderNotFoundException;
 import com.community.platform.engagement.infrastructure.persistence.ScrapFolderRepository;
 import com.community.platform.engagement.infrastructure.persistence.PostScrapRepository;
 import com.community.platform.user.exception.UserNotFoundException;
@@ -376,12 +377,43 @@ public class ScrapFolderService {
         return new Object[]{0L, 0L};
     }
 
+    // ========== Controller 호환성 메서드 (래퍼) ==========
+
     /**
-     * 스크랩 폴더를 찾을 수 없을 때 발생하는 예외
+     * 폴더 생성 (Controller용 래퍼)
+     * isPublic 파라미터는 현재 도메인에서 미지원으로 무시됨
      */
-    public static class ScrapFolderNotFoundException extends RuntimeException {
-        public ScrapFolderNotFoundException(Long folderId) {
-            super("스크랩 폴더를 찾을 수 없습니다. ID: " + folderId);
-        }
+    @Transactional
+    public ScrapFolder createFolder(Long userId, String name, String description, Boolean isPublic) {
+        log.info("스크랩 폴더 생성 (Controller). userId: {}, name: {}", userId, name);
+        // isPublic 파라미터는 현재 미구현으로 무시
+        return createScrapFolder(userId, name, description);
+    }
+
+    /**
+     * 사용자 폴더 목록 조회 (Controller용 래퍼)
+     */
+    public List<ScrapFolder> getUserFolders(Long userId) {
+        return getUserScrapFolders(userId);
+    }
+
+    /**
+     * 폴더 조회 (Controller용 래퍼 - 소유자 확인 포함)
+     */
+    public ScrapFolder getFolder(Long folderId, Long userId) {
+        ScrapFolder folder = getScrapFolderById(folderId);
+        validateFolderOwnership(folder, userId);
+        return folder;
+    }
+
+    /**
+     * 폴더 수정 (Controller용 래퍼)
+     * isPublic 파라미터는 현재 도메인에서 미지원으로 무시됨
+     */
+    @Transactional
+    public void updateFolder(Long folderId, Long userId, String name, String description, Boolean isPublic) {
+        log.info("스크랩 폴더 수정 (Controller). folderId: {}, userId: {}", folderId, userId);
+        // isPublic 파라미터는 현재 미구현으로 무시
+        updateScrapFolder(folderId, userId, name, description);
     }
 }
