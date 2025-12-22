@@ -40,16 +40,21 @@
 - **게시글 관리**: CRUD, 검색, 발행, 인기글, 트렌딩
 - **댓글 관리**: CRUD, 대댓글, 계층형 구조
 - **좋아요 관리**: 게시글 좋아요/취소, 좋아요 목록 조회
-- **스크랩 관리**: 게시글 스크랩, 스크랩 폴더 관리 ✨ NEW!
+- **스크랩 관리**: 게시글 스크랩, 스크랩 폴더 관리
+- **포인트 시스템**: 포인트 적립/사용, 레벨 시스템, 랭킹 ✨ NEW!
 - **Redis 연결**: AWS ElastiCache 연동 완료
 - 카테고리 관리 (계층형 구조)
 - 태그 시스템
 - Spring Security 설정
 
+🚧 **진행 중** (Phase 6)
+- 역할 기반 접근 제어 (RBAC)
+- 신고 관리 시스템
+- 콘텐츠 필터링
+- 공지사항 & 큐레이션
+
 🔴 **미구현**
 - 알림 시스템
-- 포인트/보상 시스템
-- 관리자 기능
 - 실시간 기능
 
 ---
@@ -123,7 +128,7 @@
 - **GET** `/api/v1/posts/scraps/me/search?currentUserId={userId}&keyword={keyword}` - 스크랩 검색
 - **GET** `/api/v1/posts/scraps/me/recent?currentUserId={userId}&days={days}` - 최근 스크랩 조회
 
-#### 📁 **스크랩 폴더 API** (ScrapFolderController, ScrapFolderService) ✨ NEW!
+#### 📁 **스크랩 폴더 API** (ScrapFolderController, ScrapFolderService)
 - **POST** `/api/v1/scrap-folders?currentUserId={userId}` - 스크랩 폴더 생성 (인증 필요)
 - **GET** `/api/v1/scrap-folders/me?currentUserId={userId}` - 내 스크랩 폴더 목록 조회
 - **GET** `/api/v1/scrap-folders/{folderId}?currentUserId={userId}` - 스크랩 폴더 상세 조회
@@ -132,6 +137,20 @@
 - **GET** `/api/v1/posts/scrap-folders/{folderId}/scraps?currentUserId={userId}` - 특정 폴더의 스크랩 목록 조회
 - **GET** `/api/v1/scrap-folders/me/empty?currentUserId={userId}` - 빈 스크랩 폴더 조회
 - **POST** `/api/v1/scrap-folders/{folderId}/set-default?currentUserId={userId}` - 기본 폴더 설정
+
+#### 🎁 **포인트 API** (PointController, PointService) ✨ NEW!
+- **GET** `/api/v1/points/me?currentUserId={userId}` - 내 포인트 정보 조회
+- **GET** `/api/v1/points/me/transactions?currentUserId={userId}` - 내 포인트 거래 내역 조회
+- **GET** `/api/v1/points/me/transactions/period?startDate={date}&endDate={date}` - 기간별 거래 내역
+- **POST** `/api/v1/points/me/use?currentUserId={userId}` - 포인트 사용 (인증 필요)
+- **GET** `/api/v1/points/ranking` - 포인트 랭킹 조회
+- **GET** `/api/v1/points/statistics/levels` - 레벨별 사용자 통계
+- **GET** `/api/v1/points/statistics/total` - 전체 포인트 통계
+
+#### 🎁 **관리자 포인트 API** ✨ NEW!
+- **POST** `/api/v1/points/admin/adjust?currentUserId={adminId}` - 포인트 지급/차감 (관리자 전용)
+- **GET** `/api/v1/points/admin/users/{userId}` - 사용자 포인트 조회 (관리자 전용)
+- **GET** `/api/v1/points/admin/users/level/{level}` - 레벨별 사용자 조회 (관리자 전용)
 
 #### 💊 **Health Check**
 - **GET** `/actuator/health` - 서버 상태 확인
@@ -642,6 +661,97 @@ curl -X POST "http://54.180.251.210:8080/api/v1/scrap-folders/2/set-default?curr
   -H "Authorization: Bearer $TOKEN"
 ```
 
+### 12. 포인트 시스템 테스트 (포인트 & 레벨) ✨ NEW!
+
+**내 포인트 정보 조회**
+```bash
+# 1. 로그인하여 토큰 받기
+TOKEN=$(curl -s -X POST http://54.180.251.210:8080/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"test@example.com","password":"Password123@"}' \
+  | grep -o '"accessToken":"[^"]*' | cut -d'"' -f4)
+
+# 2. 내 포인트 정보 조회
+curl "http://54.180.251.210:8080/api/v1/points/me?currentUserId=1"
+```
+
+**응답 예시:**
+```json
+{
+  "success": true,
+  "data": {
+    "id": 1,
+    "userId": 1,
+    "totalPoints": 150,
+    "availablePoints": 145,
+    "currentLevel": "LEVEL_2",
+    "levelDisplayName": "일반",
+    "levelNumber": 2,
+    "pointsToNextLevel": 350,
+    "dailyEarnedPoints": 10,
+    "remainingDailyLimit": 90,
+    "lastEarnedDate": "2025-12-22",
+    "createdAt": "2025-12-22T10:00:00"
+  }
+}
+```
+
+**포인트 거래 내역 및 랭킹**
+```bash
+# 내 포인트 거래 내역 조회
+curl "http://54.180.251.210:8080/api/v1/points/me/transactions?currentUserId=1"
+
+# 기간별 거래 내역
+curl "http://54.180.251.210:8080/api/v1/points/me/transactions/period?currentUserId=1&startDate=2025-12-01T00:00:00&endDate=2025-12-31T23:59:59"
+
+# 포인트 사용
+curl -X POST "http://54.180.251.210:8080/api/v1/points/me/use?currentUserId=1" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{
+    "points": 50,
+    "description": "프로필 배경 이미지 구매"
+  }'
+
+# 포인트 랭킹 조회 (상위 50명)
+curl "http://54.180.251.210:8080/api/v1/points/ranking?size=50"
+
+# 레벨별 사용자 통계
+curl "http://54.180.251.210:8080/api/v1/points/statistics/levels"
+
+# 전체 포인트 통계
+curl "http://54.180.251.210:8080/api/v1/points/statistics/total"
+```
+
+**관리자 포인트 관리 (관리자 전용)**
+```bash
+# 사용자에게 포인트 지급
+curl -X POST "http://54.180.251.210:8080/api/v1/points/admin/adjust?currentUserId=1" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{
+    "targetUserId": 2,
+    "points": 100,
+    "reason": "이벤트 당첨 보상"
+  }'
+
+# 사용자 포인트 차감
+curl -X POST "http://54.180.251.210:8080/api/v1/points/admin/adjust?currentUserId=1" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{
+    "targetUserId": 3,
+    "points": -50,
+    "reason": "부적절한 게시글 작성"
+  }'
+
+# 특정 사용자 포인트 조회
+curl "http://54.180.251.210:8080/api/v1/points/admin/users/2"
+
+# 특정 레벨 이상 사용자 조회
+curl "http://54.180.251.210:8080/api/v1/points/admin/users/level/LEVEL_5"
+```
+
 ---
 
 ## 📝 Postman으로 테스트하기
@@ -967,12 +1077,49 @@ com.community.platform
 4. ✅ 게시글 좋아요 수 자동 업데이트
 5. ✅ 좋아요한 사용자/게시글 목록 조회 기능
 
-### ✅ Phase 5: 스크랩 기능 복구 (완료 - 2025-12-22) ✨ NEW!
+### ✅ Phase 5: 스크랩 기능 복구 (완료 - 2025-12-22)
 1. ✅ PostScrapService 및 ScrapFolderService 복구
 2. ✅ PostScrapController 활성화 (DTO 호환성 수정)
 3. ✅ ScrapFolderController 활성화 (래퍼 메서드 추가)
 4. ✅ 스크랩 추가/취소, 폴더 관리 API 사용 가능
 5. ✅ 스크랩 검색, 폴더 이동, 통계 조회 기능
+
+### 🚧 Phase 6-1: 보상 시스템 - 포인트 & 레벨 (진행 중 - 2025-12-22) ✨ NEW!
+1. ✅ 도메인 모델 설계 (UserPoint, UserLevel, PointTransaction)
+2. ✅ 레벨 시스템 구현 (10단계 레벨, 포인트 구간별 분류)
+3. ✅ 포인트 적립/차감/사용 기능
+4. ✅ 일일 포인트 획득 한도 시스템
+5. ✅ 포인트 거래 내역 추적
+6. ✅ 포인트 랭킹 및 통계 기능
+7. ✅ 관리자 포인트 지급/차감 기능
+8. ⏳ 게시글/댓글 작성 시 자동 포인트 적립 (다음 단계)
+
+**레벨 시스템:**
+- LEVEL_1 (새싹): 0-99 포인트
+- LEVEL_2 (일반): 100-499 포인트
+- LEVEL_3 (단골): 500-999 포인트
+- LEVEL_4 (열성): 1,000-1,999 포인트
+- LEVEL_5 (고수): 2,000-3,999 포인트
+- LEVEL_6 (달인): 4,000-7,999 포인트
+- LEVEL_7 (명인): 8,000-15,999 포인트
+- LEVEL_8 (전설): 16,000-31,999 포인트
+- LEVEL_9 (영웅): 32,000-63,999 포인트
+- LEVEL_10 (신화): 64,000+ 포인트
+
+**포인트 획득 규칙:**
+- 게시글 작성: +10점
+- 게시글 발행: +5점
+- 댓글 작성: +3점
+- 게시글 좋아요 받음: +2점
+- 댓글 좋아요 받음: +1점
+- 게시글 스크랩 받음: +5점
+- 일일 로그인: +5점
+
+**포인트 차감 규칙:**
+- 게시글 삭제: -5점
+- 댓글 삭제: -2점
+- 스팸 패널티: -50점
+- 신고 패널티: -100점
 
 ---
 
