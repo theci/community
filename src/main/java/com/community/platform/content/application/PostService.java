@@ -4,6 +4,7 @@ import com.community.platform.content.domain.*;
 import com.community.platform.content.exception.CategoryNotFoundException;
 import com.community.platform.content.exception.PostNotFoundException;
 import com.community.platform.content.infrastructure.persistence.*;
+import com.community.platform.content.infrastructure.redis.ViewCountService;
 import com.community.platform.moderation.application.UserPenaltyService;
 import com.community.platform.moderation.exception.UserPenaltyException;
 import com.community.platform.user.exception.UserNotFoundException;
@@ -34,6 +35,7 @@ public class PostService {
     private final PostTagRepository postTagRepository;
     private final UserRepository userRepository;
     private final UserPenaltyService penaltyService;
+    private final ViewCountService viewCountService;
 
     /**
      * 새 게시글 작성 (임시저장 상태로 생성)
@@ -120,30 +122,60 @@ public class PostService {
     @Transactional
     public void deletePost(Long postId, Long authorId) {
         log.info("게시글 삭제 처리. postId: {}, authorId: {}", postId, authorId);
-        
+
         Post post = getPostById(postId);
-        
+
         // 작성자 권한 확인
         validateAuthorPermission(post, authorId);
-        
-        // 게시글 삭제
-        post.delete();
-        
+
+        // 게시글 삭제 (삭제자 ID 기록)
+        post.delete(authorId);
+
         log.info("게시글 삭제 완료. postId: {}", postId);
     }
 
     /**
-     * 게시글 상세 조회 (조회수 증가)
+     * 게시글 복구 (관리자 전용)
      */
     @Transactional
-    public Post getPostWithViewCount(Long postId) {
-        Post post = getPostById(postId);
-        
-        // 발행된 게시글만 조회수 증가
-        if (post.isPublished()) {
-            post.increaseViewCount();
+    public void restorePost(Long postId, Long adminId) {
+        log.info("게시글 복구 처리. postId: {}, adminId: {}", postId, adminId);
+
+        Post post = postRepository.findById(postId)
+                .orElseThrow(() -> new PostNotFoundException(postId));
+
+        // 삭제된 게시글만 복구 가능
+        if (!post.isDeleted()) {
+            throw new IllegalStateException("삭제되지 않은 게시글입니다");
         }
-        
+
+        // 게시글 복구
+        post.restore();
+
+        log.info("게시글 복구 완료. postId: {}", postId);
+    }
+
+    /**
+     * 삭제된 게시글 목록 조회 (관리자 전용)
+     */
+    public Page<Post> getDeletedPosts(Pageable pageable) {
+        log.info("삭제된 게시글 목록 조회");
+        return postRepository.findByStatusOrderByPublishedAtDesc(PostStatus.DELETED, pageable);
+    }
+
+    /**
+     * 게시글 상세 조회 (조회수 증가)
+     * Redis 기반 중복 방지 (IP + User ID, 24시간 TTL)
+     */
+    @Transactional
+    public Post getPostWithViewCount(Long postId, String userId, String ip) {
+        Post post = getPostById(postId);
+
+        // 발행된 게시글만 조회수 증가 (Redis 중복 방지)
+        if (post.isPublished()) {
+            viewCountService.incrementViewCount(postId, userId, ip);
+        }
+
         return post;
     }
 

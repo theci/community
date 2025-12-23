@@ -1466,3 +1466,483 @@ com.community.platform
 - 신고 패널티: -100점
 
 ---
+### 16. 게시판 고도화 기능 테스트 (파일 첨부, Redis 조회수, 게시글 복구) ✨ NEW!
+
+**Phase 2에서 추가된 게시판 고도화 기능:**
+1. 게시글 파일 첨부 (이미지, 동영상)
+2. Redis 기반 조회수 중복 방지 (IP + User ID, 24시간 TTL)
+3. 게시글 소프트 삭제 & 복구 (관리자 전용)
+
+---
+
+#### 16.1 파일 첨부 기능
+
+**지원 파일 타입:**
+- **이미지 (IMAGE)**: jpg, jpeg, png, gif, webp (최대 10MB)
+- **동영상 (VIDEO)**: mp4, avi, mov, wmv (최대 100MB)
+
+**파일 첨부 업로드 (POST /api/v1/posts/{postId}/attachments)**
+
+```bash
+# 게시글에 이미지 파일 첨부
+curl -X POST 'http://54.180.251.210:8080/api/v1/posts/1/attachments?currentUserId=1' \
+  -F 'files=@/path/to/image1.jpg' \
+  -F 'files=@/path/to/image2.png'
+
+# 응답 예시
+{
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "postId": 1,
+      "fileName": "a1b2c3d4-e5f6-7890-abcd-ef1234567890.jpg",
+      "originalName": "image1.jpg",
+      "fileType": "IMAGE",
+      "filePath": "2025/01/15/a1b2c3d4-e5f6-7890-abcd-ef1234567890.jpg",
+      "fileUrl": "/api/v1/files/2025/01/15/a1b2c3d4-e5f6-7890-abcd-ef1234567890.jpg",
+      "fileSize": 2048576,
+      "mimeType": "image/jpeg",
+      "displayOrder": 0
+    },
+    {
+      "id": 2,
+      "postId": 1,
+      "fileName": "b2c3d4e5-f6g7-8901-bcde-fg2345678901.png",
+      "originalName": "image2.png",
+      "fileType": "IMAGE",
+      "filePath": "2025/01/15/b2c3d4e5-f6g7-8901-bcde-fg2345678901.png",
+      "fileUrl": "/api/v1/files/2025/01/15/b2c3d4e5-f6g7-8901-bcde-fg2345678901.png",
+      "fileSize": 1536000,
+      "mimeType": "image/png",
+      "displayOrder": 1
+    }
+  ],
+  "message": "파일이 업로드되었습니다"
+}
+```
+
+**첨부파일 목록 조회 (GET /api/v1/posts/{postId}/attachments)**
+
+```bash
+curl 'http://54.180.251.210:8080/api/v1/posts/1/attachments'
+
+# 응답 예시
+{
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "postId": 1,
+      "fileName": "a1b2c3d4-e5f6-7890-abcd-ef1234567890.jpg",
+      "originalName": "image1.jpg",
+      "fileType": "IMAGE",
+      "filePath": "2025/01/15/a1b2c3d4-e5f6-7890-abcd-ef1234567890.jpg",
+      "fileUrl": "/api/v1/files/2025/01/15/a1b2c3d4-e5f6-7890-abcd-ef1234567890.jpg",
+      "fileSize": 2048576,
+      "mimeType": "image/jpeg",
+      "displayOrder": 0
+    }
+  ]
+}
+```
+
+**첨부파일 삭제 (DELETE /api/v1/posts/attachments/{attachmentId})**
+
+```bash
+# 작성자만 삭제 가능
+curl -X DELETE 'http://54.180.251.210:8080/api/v1/posts/attachments/1?currentUserId=1'
+
+# 응답 예시
+{
+  "success": true,
+  "data": null,
+  "message": "첨부파일이 삭제되었습니다"
+}
+
+# 권한 없는 사용자가 삭제 시도 시 에러
+curl -X DELETE 'http://54.180.251.210:8080/api/v1/posts/attachments/1?currentUserId=2'
+
+{
+  "success": false,
+  "message": "첨부파일을 삭제할 권한이 없습니다",
+  "errorCode": "FORBIDDEN"
+}
+```
+
+**파일 크기 제한 초과 시 에러 응답:**
+
+```bash
+# 11MB 이미지 업로드 시도 (제한: 10MB)
+{
+  "success": false,
+  "message": "이미지 파일 크기는 최대 10MB까지 허용됩니다",
+  "errorCode": "VALIDATION_FAILED"
+}
+
+# 101MB 동영상 업로드 시도 (제한: 100MB)
+{
+  "success": false,
+  "message": "동영상 파일 크기는 최대 100MB까지 허용됩니다",
+  "errorCode": "VALIDATION_FAILED"
+}
+```
+
+**지원하지 않는 파일 형식 에러:**
+
+```bash
+# PDF 파일 업로드 시도
+{
+  "success": false,
+  "message": "지원하지 않는 파일 형식입니다: pdf",
+  "errorCode": "VALIDATION_FAILED"
+}
+```
+
+---
+
+#### 16.2 Redis 기반 조회수 중복 방지
+
+**기존 문제:**
+- 페이지를 새로고침할 때마다 조회수가 계속 증가
+- 같은 사용자가 여러 번 조회 시 중복 카운트
+
+**개선 사항:**
+- Redis Set을 사용하여 24시간 동안 중복 조회 방지
+- 로그인 사용자: User ID로 식별
+- 비로그인 사용자: IP 주소로 식별
+- 24시간 TTL 후 자동 만료
+
+**조회수 증가 테스트 시나리오:**
+
+```bash
+# 1. 처음 게시글 조회 (조회수 +1)
+curl 'http://54.180.251.210:8080/api/v1/posts/1?currentUserId=1'
+
+# 응답에서 viewCount 확인
+{
+  "success": true,
+  "data": {
+    "id": 1,
+    "title": "테스트 게시글",
+    "viewCount": 1,  # 조회수 증가
+    ...
+  }
+}
+
+# 2. 같은 사용자가 즉시 다시 조회 (조회수 증가 안 함)
+curl 'http://54.180.251.210:8080/api/v1/posts/1?currentUserId=1'
+
+# viewCount 변화 없음
+{
+  "success": true,
+  "data": {
+    "id": 1,
+    "viewCount": 1,  # 그대로 유지
+    ...
+  }
+}
+
+# 3. 다른 사용자가 조회 (조회수 +1)
+curl 'http://54.180.251.210:8080/api/v1/posts/1?currentUserId=2'
+
+{
+  "success": true,
+  "data": {
+    "id": 1,
+    "viewCount": 2,  # 조회수 증가
+    ...
+  }
+}
+
+# 4. 비로그인 사용자 조회 (IP 기반, 조회수 +1)
+curl 'http://54.180.251.210:8080/api/v1/posts/1'
+
+{
+  "success": true,
+  "data": {
+    "id": 1,
+    "viewCount": 3,  # 조회수 증가
+    ...
+  }
+}
+
+# 5. 같은 비로그인 사용자가 다시 조회 (같은 IP, 조회수 증가 안 함)
+curl 'http://54.180.251.210:8080/api/v1/posts/1'
+
+{
+  "success": true,
+  "data": {
+    "id": 1,
+    "viewCount": 3,  # 그대로 유지
+    ...
+  }
+}
+```
+
+**Redis 조회 기록 확인 (Redis CLI):**
+
+```bash
+# Redis에 접속
+redis-cli -h clustercfg.test.mxcsbc.apn2.cache.amazonaws.com -p 6379
+
+# 게시글 1번의 조회 기록 확인
+SMEMBERS post:view:1
+
+# 출력 예시:
+# 1) "user:1"
+# 2) "user:2"
+# 3) "ip:192.168.1.100"
+
+# TTL 확인 (24시간 = 86400초)
+TTL post:view:1
+
+# 출력 예시: 85234 (남은 시간)
+```
+
+---
+
+#### 16.3 게시글 소프트 삭제 & 복구
+
+**소프트 삭제 (Soft Delete):**
+- 게시글 삭제 시 실제 DB에서 삭제하지 않고 상태만 DELETED로 변경
+- deletedAt (삭제 시각), deletedBy (삭제자 ID) 기록
+- 일반 목록 조회 시 제외되지만, 관리자는 삭제된 게시글 조회 가능
+
+**게시글 삭제 (POST /api/v1/posts/{postId}/delete)**
+
+```bash
+# 작성자가 자신의 게시글 삭제
+curl -X DELETE 'http://54.180.251.210:8080/api/v1/posts/1?currentUserId=1'
+
+# 응답
+{
+  "success": true,
+  "data": null,
+  "message": "게시글이 삭제되었습니다"
+}
+
+# 삭제 후 게시글 조회 시
+curl 'http://54.180.251.210:8080/api/v1/posts/1'
+
+# 에러 응답 (DELETED 상태의 게시글은 조회 불가)
+{
+  "success": false,
+  "message": "게시글을 찾을 수 없습니다",
+  "errorCode": "POST_NOT_FOUND"
+}
+```
+
+**삭제된 게시글 목록 조회 (관리자 전용)**
+
+```bash
+# GET /api/v1/posts/deleted
+curl 'http://54.180.251.210:8080/api/v1/posts/deleted?currentUserId=1&page=0&size=20'
+
+# 응답 예시
+{
+  "success": true,
+  "data": {
+    "content": [
+      {
+        "id": 1,
+        "title": "삭제된 게시글 제목",
+        "content": "삭제된 콘텐츠...",
+        "status": "DELETED",
+        "deletedAt": "2025-01-15T10:30:00",
+        "deletedBy": 1,
+        "authorId": 1,
+        "viewCount": 150,
+        "likeCount": 10,
+        "commentCount": 5,
+        ...
+      }
+    ],
+    "totalElements": 1,
+    "totalPages": 1,
+    "number": 0,
+    "size": 20
+  }
+}
+```
+
+**게시글 복구 (관리자 전용)**
+
+```bash
+# POST /api/v1/posts/{postId}/restore
+curl -X POST 'http://54.180.251.210:8080/api/v1/posts/1/restore?currentUserId=1'
+
+# 응답
+{
+  "success": true,
+  "data": null,
+  "message": "게시글이 복구되었습니다"
+}
+
+# 복구 후 게시글 조회 가능
+curl 'http://54.180.251.210:8080/api/v1/posts/1'
+
+{
+  "success": true,
+  "data": {
+    "id": 1,
+    "title": "복구된 게시글",
+    "status": "PUBLISHED",
+    "deletedAt": null,
+    "deletedBy": null,
+    ...
+  }
+}
+```
+
+**복구 에러 케이스:**
+
+```bash
+# 1. 삭제되지 않은 게시글 복구 시도
+curl -X POST 'http://54.180.251.210:8080/api/v1/posts/2/restore?currentUserId=1'
+
+{
+  "success": false,
+  "message": "삭제되지 않은 게시글입니다",
+  "errorCode": "INVALID_STATE"
+}
+
+# 2. 존재하지 않는 게시글 복구 시도
+curl -X POST 'http://54.180.251.210:8080/api/v1/posts/999/restore?currentUserId=1'
+
+{
+  "success": false,
+  "message": "게시글을 찾을 수 없습니다",
+  "errorCode": "POST_NOT_FOUND"
+}
+```
+
+---
+
+#### 16.4 파일 첨부 + 게시글 작성 통합 시나리오
+
+**시나리오: 이미지가 포함된 게시글 작성**
+
+```bash
+# 1. 게시글 작성
+curl -X POST 'http://54.180.251.210:8080/api/v1/posts?currentUserId=1' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "categoryId": 1,
+    "title": "여행 사진 공유",
+    "content": "제주도 여행 사진입니다!",
+    "contentType": "MARKDOWN",
+    "tagNames": ["여행", "제주도", "사진"]
+  }'
+
+# 응답에서 postId 확인 (예: 10)
+{
+  "success": true,
+  "data": {
+    "id": 10,
+    "title": "여행 사진 공유",
+    ...
+  }
+}
+
+# 2. 게시글에 이미지 첨부
+curl -X POST 'http://54.180.251.210:8080/api/v1/posts/10/attachments?currentUserId=1' \
+  -F 'files=@/home/user/jeju1.jpg' \
+  -F 'files=@/home/user/jeju2.jpg' \
+  -F 'files=@/home/user/jeju3.jpg'
+
+# 응답
+{
+  "success": true,
+  "data": [
+    {
+      "id": 5,
+      "postId": 10,
+      "originalName": "jeju1.jpg",
+      "fileType": "IMAGE",
+      "displayOrder": 0,
+      ...
+    },
+    {
+      "id": 6,
+      "postId": 10,
+      "originalName": "jeju2.jpg",
+      "fileType": "IMAGE",
+      "displayOrder": 1,
+      ...
+    },
+    {
+      "id": 7,
+      "postId": 10,
+      "originalName": "jeju3.jpg",
+      "fileType": "IMAGE",
+      "displayOrder": 2,
+      ...
+    }
+  ],
+  "message": "파일이 업로드되었습니다"
+}
+
+# 3. 게시글 발행
+curl -X POST 'http://54.180.251.210:8080/api/v1/posts/10/publish?currentUserId=1'
+
+# 4. 게시글 조회 (첨부파일 목록 포함)
+curl 'http://54.180.251.210:8080/api/v1/posts/10?currentUserId=1'
+
+{
+  "success": true,
+  "data": {
+    "id": 10,
+    "title": "여행 사진 공유",
+    "content": "제주도 여행 사진입니다!",
+    "viewCount": 1,
+    "attachments": [  # 첨부파일 목록
+      {
+        "id": 5,
+        "originalName": "jeju1.jpg",
+        "fileUrl": "/api/v1/files/2025/01/15/...",
+        "fileType": "IMAGE"
+      },
+      {
+        "id": 6,
+        "originalName": "jeju2.jpg",
+        "fileUrl": "/api/v1/files/2025/01/15/...",
+        "fileType": "IMAGE"
+      },
+      {
+        "id": 7,
+        "originalName": "jeju3.jpg",
+        "fileUrl": "/api/v1/files/2025/01/15/...",
+        "fileType": "IMAGE"
+      }
+    ],
+    ...
+  }
+}
+```
+
+---
+
+#### 16.5 Phase 2 주요 개선 사항 요약
+
+**파일 첨부 시스템:**
+- ✅ 이미지 (jpg, jpeg, png, gif, webp) 최대 10MB 지원
+- ✅ 동영상 (mp4, avi, mov, wmv) 최대 100MB 지원
+- ✅ UUID 기반 고유 파일명 생성으로 충돌 방지
+- ✅ 날짜별 디렉토리 자동 생성 (yyyy/MM/dd)
+- ✅ 파일 크기 및 확장자 검증
+- ✅ 작성자 권한 기반 첨부파일 삭제
+
+**Redis 조회수 중복 방지:**
+- ✅ IP + User ID 조합으로 24시간 동안 중복 조회 방지
+- ✅ Redis Set을 활용한 고성능 중복 체크
+- ✅ 24시간 TTL 자동 만료
+- ✅ Redis 장애 시 Fallback 처리 (매번 조회수 증가)
+
+**게시글 소프트 삭제 & 복구:**
+- ✅ 소프트 삭제로 데이터 보존 (deletedAt, deletedBy 기록)
+- ✅ 삭제된 게시글 목록 조회 (관리자 전용)
+- ✅ 삭제된 게시글 복구 기능 (관리자 전용)
+- ✅ PostRestoredEvent 발행으로 알림 시스템 연동 준비
+
+---

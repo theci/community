@@ -58,6 +58,12 @@ public class Post extends AggregateRoot {
     @Column(name = "published_at")
     private LocalDateTime publishedAt;
 
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;
+
+    @Column(name = "deleted_by")
+    private Long deletedBy;
+
     @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Comment> comments = new ArrayList<>();
 
@@ -99,8 +105,24 @@ public class Post extends AggregateRoot {
     }
 
     public void delete() {
+        delete(null);
+    }
+
+    public void delete(Long deletedBy) {
         this.status = PostStatus.DELETED;
+        this.deletedAt = LocalDateTime.now();
+        this.deletedBy = deletedBy;
         addDomainEvent(new PostDeletedEvent(this.getId(), this.authorId));
+    }
+
+    public void restore() {
+        if (!isDeleted()) {
+            throw new IllegalStateException("삭제되지 않은 게시글입니다");
+        }
+        this.status = PostStatus.PUBLISHED;
+        this.deletedAt = null;
+        this.deletedBy = null;
+        addDomainEvent(new PostRestoredEvent(this.getId(), this.authorId));
     }
 
     public void increaseViewCount() {

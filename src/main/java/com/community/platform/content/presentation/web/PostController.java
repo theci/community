@@ -11,6 +11,7 @@ import com.community.platform.user.application.UserMapper;
 import com.community.platform.user.application.UserService;
 import com.community.platform.user.domain.User;
 import com.community.platform.user.dto.UserSummaryResponse;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -110,19 +111,48 @@ public class PostController {
     }
 
     /**
-     * 게시글 상세 조회 (조회수 증가)
+     * 게시글 상세 조회 (조회수 증가, Redis 중복 방지)
      * GET /api/v1/posts/{postId}
      */
     @GetMapping("/{postId}")
     public ApiResponse<PostResponse> getPost(
             @PathVariable Long postId,
-            @RequestParam(required = false) Long currentUserId) { // 비로그인 사용자 고려
+            @RequestParam(required = false) Long currentUserId,
+            HttpServletRequest request) {
         log.debug("게시글 상세 조회: postId={}", postId);
 
-        Post post = postService.getPostWithViewCount(postId);
+        String userId = currentUserId != null ? currentUserId.toString() : null;
+        String ip = getClientIp(request);
+
+        Post post = postService.getPostWithViewCount(postId, userId, ip);
         PostResponse response = buildPostResponse(post, currentUserId);
 
         return ApiResponse.success(response);
+    }
+
+    /**
+     * 클라이언트 IP 주소 추출
+     * X-Forwarded-For 헤더 우선, 없으면 Remote Address 사용
+     */
+    private String getClientIp(HttpServletRequest request) {
+        String ip = request.getHeader("X-Forwarded-For");
+        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getHeader("Proxy-Client-IP");
+        }
+        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getHeader("WL-Proxy-Client-IP");
+        }
+        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getHeader("HTTP_X_FORWARDED_FOR");
+        }
+        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getRemoteAddr();
+        }
+        // 쉼표로 구분된 경우 첫 번째 IP만 사용
+        if (ip != null && ip.contains(",")) {
+            ip = ip.split(",")[0].trim();
+        }
+        return ip;
     }
 
     /**
@@ -279,6 +309,41 @@ public class PostController {
 
         postService.unmarkAsNotice(postId);
         return ApiResponse.success("공지사항이 해제되었습니다");
+    }
+
+    /**
+     * 삭제된 게시글 목록 조회 (관리자 전용)
+     * GET /api/v1/posts/deleted
+     */
+    @GetMapping("/deleted")
+    public ApiResponse<PageResponse<PostSummaryResponse>> getDeletedPosts(
+            @PageableDefault(size = 20) Pageable pageable,
+            @RequestParam(required = false) Long currentUserId) {
+        log.info("삭제된 게시글 목록 조회");
+
+        // TODO: 관리자 권한 체크
+
+        Page<Post> posts = postService.getDeletedPosts(pageable);
+        Page<PostSummaryResponse> postResponses = posts.map(post -> buildPostSummaryResponse(post, currentUserId));
+        PageResponse<PostSummaryResponse> response = PageResponse.of(postResponses);
+
+        return ApiResponse.success(response);
+    }
+
+    /**
+     * 게시글 복구 (관리자 전용)
+     * POST /api/v1/posts/{postId}/restore
+     */
+    @PostMapping("/{postId}/restore")
+    public ApiResponse<Void> restorePost(
+            @PathVariable Long postId,
+            @RequestParam(required = false) Long currentUserId) {
+        log.info("게시글 복구: postId={}, adminId={}", postId, currentUserId);
+
+        // TODO: 관리자 권한 체크
+
+        postService.restorePost(postId, currentUserId);
+        return ApiResponse.success("게시글이 복구되었습니다");
     }
 
     /**
