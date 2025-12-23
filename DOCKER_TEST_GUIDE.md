@@ -12,7 +12,8 @@
 │   ├── Engagement (참여): 좋아요, 스크랩, 스크랩 폴더
 │   ├── Notification (알림): 시스템 알림
 │   ├── Authorization (권한): 역할 기반 접근 제어 (RBAC)
-│   └── Reward (보상): 포인트 시스템
+│   ├── Reward (보상): 포인트 시스템
+│   └── Moderation (중재): 신고 시스템
 │
 ├── 🔧 Application Layer (응용 계층)
 │   └── Service 클래스들 (비즈니스 로직 처리)
@@ -48,8 +49,10 @@
 - 태그 시스템
 - Spring Security 설정
 
+✅ **구현 완료**
+- 신고 관리 시스템 ✨ NEW!
+
 🚧 **진행 중** (Phase 6)
-- 신고 관리 시스템
 - 콘텐츠 필터링
 - 공지사항 & 큐레이션
 
@@ -164,6 +167,23 @@
 - **POST** `/api/v1/roles/admin/change?currentUserId={adminId}` - 사용자 역할 변경 (관리자 전용)
 - **GET** `/api/v1/roles/admin/{role}/users` - 역할별 사용자 목록 (관리자 전용)
 - **GET** `/api/v1/roles/admin/admins` - 관리자 목록 조회 (관리자 전용)
+
+#### 🚨 **신고 API** (ReportController, ReportService) ✨ NEW!
+- **POST** `/api/v1/reports?currentUserId={userId}` - 신고 생성 (인증 필요)
+- **GET** `/api/v1/reports/{reportId}` - 신고 상세 조회
+- **GET** `/api/v1/reports/pending` - 대기 중인 신고 목록 (관리자 전용)
+- **GET** `/api/v1/reports/high-severity` - 고위험 신고 목록 (관리자 전용)
+- **GET** `/api/v1/reports/status/{status}` - 상태별 신고 목록 (관리자 전용)
+- **GET** `/api/v1/reports/type/{targetType}` - 대상 유형별 신고 목록 (관리자 전용)
+- **GET** `/api/v1/reports/target/{targetType}/{targetId}` - 특정 대상의 신고 목록
+- **GET** `/api/v1/reports/me?currentUserId={userId}` - 내가 신고한 목록 조회
+- **GET** `/api/v1/reports/user/{userId}` - 특정 사용자에 대한 신고 목록 (관리자 전용)
+- **POST** `/api/v1/reports/{reportId}/review/start?currentUserId={adminId}` - 신고 검토 시작 (관리자 전용)
+- **POST** `/api/v1/reports/{reportId}/approve?currentUserId={adminId}` - 신고 승인 (관리자 전용)
+- **POST** `/api/v1/reports/{reportId}/reject?currentUserId={adminId}` - 신고 반려 (관리자 전용)
+- **GET** `/api/v1/reports/statistics` - 신고 통계 조회 (관리자 전용)
+- **GET** `/api/v1/reports/statistics/count?startDate={date}&endDate={date}` - 기간별 신고 수 (관리자 전용)
+- **GET** `/api/v1/reports/statistics/target/{targetType}/{targetId}/count` - 대상별 신고 수 조회
 
 #### 💊 **Health Check**
 - **GET** `/actuator/health` - 서버 상태 확인
@@ -285,6 +305,12 @@ curl -X POST http://54.180.251.210:8080/api/v1/auth/login \
   "message": "로그인이 완료되었습니다",
   "timestamp": "2025-12-21T09:37:56.889171438"
 }
+```
+
+ADMIN으로 변경하려면 H2 데이터베이스 콘솔에 직접 접속해서 역할을 변경해야 합니다. (최초 관리자는 데이터베이스에서 직접 설정해야 합니다)
+```sql
+  -- 예: ID가 1인 사용자를 ADMIN으로 변경
+  UPDATE users SET role = 'ADMIN' WHERE id = 1;
 ```
 
 ### 3. 인증이 필요한 API 호출 예시
@@ -685,7 +711,9 @@ TOKEN=$(curl -s -X POST http://54.180.251.210:8080/api/v1/auth/login \
   | grep -o '"accessToken":"[^"]*' | cut -d'"' -f4)
 
 # 2. 내 포인트 정보 조회
-curl "http://54.180.251.210:8080/api/v1/points/me?currentUserId=1"
+
+curl "http://54.180.251.210:8080/api/v1/points/me?currentUserId=1" \
+  -H "Authorization: Bearer $TOKEN"
 ```
 
 **응답 예시:**
@@ -709,32 +737,16 @@ curl "http://54.180.251.210:8080/api/v1/points/me?currentUserId=1"
 }
 ```
 
-**포인트 거래 내역 및 랭킹**
 ```bash
-# 내 포인트 거래 내역 조회
-curl "http://54.180.251.210:8080/api/v1/points/me/transactions?currentUserId=1"
-
-# 기간별 거래 내역
-curl "http://54.180.251.210:8080/api/v1/points/me/transactions/period?currentUserId=1&startDate=2025-12-01T00:00:00&endDate=2025-12-31T23:59:59"
-
-# 포인트 사용
-curl -X POST "http://54.180.251.210:8080/api/v1/points/me/use?currentUserId=1" \
+**특정 사용자 생성**
+curl -X POST http://54.180.251.210:8080/api/v1/users/register \
   -H "Content-Type: application/json" \
-  -H "Authorization: Bearer $TOKEN" \
   -d '{
-    "points": 50,
-    "description": "프로필 배경 이미지 구매"
+    "email": "test2@example.com",
+    "password": "Password123@",
+    "nickname": "testuser2"
   }'
 
-# 포인트 랭킹 조회 (상위 50명)
-curl "http://54.180.251.210:8080/api/v1/points/ranking?size=50"
-
-# 레벨별 사용자 통계
-curl "http://54.180.251.210:8080/api/v1/points/statistics/levels"
-
-# 전체 포인트 통계
-curl "http://54.180.251.210:8080/api/v1/points/statistics/total"
-```
 
 **관리자 포인트 관리 (관리자 전용)**
 ```bash
@@ -753,36 +765,78 @@ curl -X POST "http://54.180.251.210:8080/api/v1/points/admin/adjust?currentUserI
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{
-    "targetUserId": 3,
+    "targetUserId": 2,
     "points": -50,
     "reason": "부적절한 게시글 작성"
   }'
 
+```bash
 # 특정 사용자 포인트 조회
-curl "http://54.180.251.210:8080/api/v1/points/admin/users/2"
+curl "http://54.180.251.210:8080/api/v1/points/admin/users/1" \
+  -H "Authorization: Bearer $TOKEN"
 
 # 특정 레벨 이상 사용자 조회
-curl "http://54.180.251.210:8080/api/v1/points/admin/users/level/LEVEL_5"
+curl "http://54.180.251.210:8080/api/v1/points/admin/users/level/LEVEL_5" \
+  -H "Authorization: Bearer $TOKEN"
 ```
+
+
+**포인트 거래 내역 및 랭킹**
+```bash
+# 내 포인트 거래 내역 조회
+curl "http://54.180.251.210:8080/api/v1/points/me/transactions?currentUserId=1" \
+  -H "Authorization: Bearer $TOKEN"
+
+# 기간별 거래 내역
+curl "http://54.180.251.210:8080/api/v1/points/me/transactions/period?currentUserId=1&startDate=2025-12-01T00:00:00&endDate=2025-12-31T23:59:59" \
+  -H "Authorization: Bearer $TOKEN"
+
+# 포인트 사용
+curl -X POST "http://54.180.251.210:8080/api/v1/points/me/use?currentUserId=2" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{
+    "points": 50,
+    "description": "프로필 배경 이미지 구매"
+  }'
+
+# 포인트 랭킹 조회 (상위 50명)
+curl "http://54.180.251.210:8080/api/v1/points/ranking?size=50" \
+  -H "Authorization: Bearer $TOKEN"
+
+# 레벨별 사용자 통계
+curl "http://54.180.251.210:8080/api/v1/points/statistics/levels" \
+  -H "Authorization: Bearer $TOKEN"
+
+# 전체 포인트 통계
+curl "http://54.180.251.210:8080/api/v1/points/statistics/total" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
 
 ### 13. 역할 및 권한 관리 테스트 (RBAC) ✨ NEW!
 
 **역할 및 권한 정보 조회 (인증 불필요)**
 ```bash
 # 1. 모든 역할 정보 조회
-curl "http://54.180.251.210:8080/api/v1/roles"
+curl "http://54.180.251.210:8080/api/v1/roles" \
+  -H "Authorization: Bearer $TOKEN"
 
 # 2. 특정 역할 상세 정보 조회
-curl "http://54.180.251.210:8080/api/v1/roles/MODERATOR"
+curl "http://54.180.251.210:8080/api/v1/roles/MODERATOR" \
+  -H "Authorization: Bearer $TOKEN"
 
 # 3. 모든 권한 정보 조회
-curl "http://54.180.251.210:8080/api/v1/roles/permissions"
+curl "http://54.180.251.210:8080/api/v1/roles/permissions" \
+  -H "Authorization: Bearer $TOKEN"
 
 # 4. 특정 역할의 권한 목록 조회
-curl "http://54.180.251.210:8080/api/v1/roles/ADMIN/permissions"
+curl "http://54.180.251.210:8080/api/v1/roles/ADMIN/permissions" \
+  -H "Authorization: Bearer $TOKEN"
 
 # 5. 역할별 사용자 통계
-curl "http://54.180.251.210:8080/api/v1/roles/statistics"
+curl "http://54.180.251.210:8080/api/v1/roles/statistics" \
+  -H "Authorization: Bearer $TOKEN"
 ```
 
 **응답 예시 (역할 정보):**
@@ -827,7 +881,8 @@ TOKEN=$(curl -s -X POST http://54.180.251.210:8080/api/v1/auth/login \
   | grep -o '"accessToken":"[^"]*' | cut -d'"' -f4)
 
 # 특정 사용자의 특정 권한 확인
-curl "http://54.180.251.210:8080/api/v1/roles/check-permission?userId=1&permission=POST_DELETE_ALL"
+curl "http://54.180.251.210:8080/api/v1/roles/check-permission?userId=2&permission=POST_DELETE_ALL" \
+  -H "Authorization: Bearer $TOKEN"
 ```
 
 **응답 예시 (권한 확인):**
@@ -877,7 +932,9 @@ curl "http://54.180.251.210:8080/api/v1/roles/admin/admins" \
 ```bash
 # 시나리오: 사용자가 LEVEL 7에 도달하면 자동으로 POWER_USER로 승격
 # 1. 사용자 포인트 조회 (현재 LEVEL 6, USER 역할)
-curl "http://54.180.251.210:8080/api/v1/points/me?currentUserId=2"
+curl "http://54.180.251.210:8080/api/v1/points/me?currentUserId=2" \
+  -H "Authorization: Bearer $TOKEN"
+
 # → totalPoints: 7500, currentLevel: LEVEL_6
 
 # 2. 관리자가 포인트 지급 (LEVEL 7로 상승)
@@ -891,250 +948,190 @@ curl -X POST "http://54.180.251.210:8080/api/v1/points/admin/adjust?currentUserI
   }'
 
 # 3. 포인트 재조회 (LEVEL 7 달성, 자동으로 POWER_USER로 승격됨)
-curl "http://54.180.251.210:8080/api/v1/points/me?currentUserId=2"
+curl "http://54.180.251.210:8080/api/v1/points/me?currentUserId=2" \
+  -H "Authorization: Bearer $TOKEN"
+
 # → totalPoints: 8500, currentLevel: LEVEL_7, role: POWER_USER
 ```
 
----
+### 14. 신고 시스템 테스트 (신고 관리) ✨ NEW!
 
-## 📝 Postman으로 테스트하기
-
-### 1. Postman 컬렉션 구성
-
-#### Base URL 설정
-- Variable name: `baseUrl`
-- Initial value: `http://54.180.251.210:8080/api/v1`
-
-#### 회원가입 요청
-```
-POST {{baseUrl}}/users/register
-Content-Type: application/json
-
-{
-  "email": "test@example.com",
-  "password": "Password123@",
-  "nickname": "testuser"
-}
-```
-
-#### 로그인 요청
-```
-POST {{baseUrl}}/auth/login
-Content-Type: application/json
-
-{
-  "email": "test@example.com",
-  "password": "Password123@"
-}
-
-Tests 탭에 추가:
-pm.environment.set("accessToken", pm.response.json().data.accessToken);
-```
-
-#### 인증이 필요한 요청
-```
-POST {{baseUrl}}/auth/logout
-Authorization: Bearer {{accessToken}}
-```
-
----
-
-## 🔨 앞으로 구현해야 할 부분
-
-### ✅ 완료된 부분
-
-1. **UserService 복구** (2025-12-21)
-   - ✅ Exception import 문제 해결
-   - ✅ UserNotFoundException, DuplicateUserException 추가
-
-2. **AuthController & UserController 복구** (2025-12-21)
-   - ✅ 회원가입 API 활성화
-   - ✅ 로그인 API 활성화
-   - ✅ 토큰 갱신/로그아웃 API 활성화
-
-3. **비밀번호 유효성 검증 수정** (2025-12-21)
-   - ✅ UserRegisterRequest 정규식 패턴 수정
-   - ✅ 길이 제한 추가 (`{8,20}$` 패턴)
-   - ✅ 허용 특수문자 명시 (`@$!%*?&`)
-
-4. **Spring Security 설정 수정** (2025-12-21)
-   - ✅ `/api/v1/auth/login` 공개 API로 설정
-   - ✅ `/api/v1/auth/refresh`, `/api/v1/auth/validate` 공개 API로 설정
-
-5. **게시글 관리 기능 복구** (2025-12-22)
-   - ✅ PostService Exception import 추가 (PostNotFoundException, CategoryNotFoundException)
-   - ✅ PostRepositoryImpl QueryDSL Tuple 변환 문제 해결
-   - ✅ PostRepository에 PostRepositoryCustom 재연결
-   - ✅ PostController 활성화
-   - ✅ 게시글 CRUD, 검색, 발행, 인기글, 트렌딩 API 사용 가능
-
-6. **좋아요 관리 기능 복구** (2025-12-22) ✨ NEW!
-   - ✅ PostLikeService LikeResult 클래스 추가
-   - ✅ PostLikeService 메서드 보완 (toggleLike, getLikeCount 등)
-   - ✅ PostLikeController 중복 엔드포인트 제거
-   - ✅ PostLikeController 활성화
-   - ✅ 좋아요 토글, 상태 확인, 목록 조회 API 사용 가능
-
-### 🚧 다음 구현 단계
-
-#### Phase 1: 스크랩 기능 복구 (다음 우선순위)
-
-**PostScrapController, ScrapFolderController 복구**
-- 각 Controller의 Service 의존성 확인
-- 누락된 메서드 구현
-- API 엔드포인트 테스트
-
-#### Phase 2: 고급 기능 구현
-
-**알림 시스템, 포인트/보상 시스템, 관리자 기능 등**
-
-### 📋 기능별 체크리스트
-
-#### 인증/사용자 관리
-- [x] 회원가입
-- [x] 로그인
-- [x] 토큰 갱신
-- [x] 로그아웃
-- [ ] 이메일 중복 확인 API
-- [ ] 닉네임 중복 확인 API
-- [ ] 프로필 조회
-- [ ] 프로필 수정
-- [ ] 비밀번호 변경
-
-#### 게시글 관리
-- [x] 게시글 목록 조회
-- [x] 게시글 상세 조회
-- [x] 게시글 작성
-- [x] 게시글 발행 (임시저장 → 발행)
-- [x] 게시글 수정
-- [x] 게시글 삭제
-- [x] 게시글 검색 (복합 필터)
-- [x] 인기 게시글 조회
-- [x] 트렌딩 게시글 조회
-- [x] 카테고리별 게시글 조회
-- [x] 작성자별 게시글 조회
-- [x] 유사 게시글 조회
-- [x] 공지사항 관리
-
-#### 댓글 관리 ✨ NEW!
-- [x] 댓글 목록 조회 (계층형 구조)
-- [x] 댓글 작성
-- [x] 대댓글 작성 (최대 2단계)
-- [x] 댓글 수정
-- [x] 댓글 삭제 (소프트 삭제)
-- [x] 댓글 상세 조회
-- [x] 작성자별 댓글 조회
-- [x] 댓글 검색
-- [x] 댓글 차단/복원 (관리자용)
-
-#### 참여 기능
-- [x] 게시글 좋아요
-- [x] 좋아요 토글 (추가/취소)
-- [x] 좋아요 상태 확인
-- [x] 좋아요한 사용자/게시글 목록 조회
-- [x] 게시글 스크랩 ✨ NEW!
-- [x] 스크랩 추가/취소 ✨ NEW!
-- [x] 스크랩 폴더 관리 ✨ NEW!
-- [x] 스크랩 검색 및 통계 ✨ NEW!
-
----
-
-## 🐛 문제 해결
-
-### Redis 연결 상태 ✨ NEW!
-Redis는 AWS ElastiCache에 연결되어 있습니다:
-```
-Host: test-0001-001.test.mxcsbc.apn2.cache.amazonaws.com
-Port: 6379
-SSL: Disabled
-```
-Redis는 캐싱용으로 사용되며, 세션 관리 및 성능 최적화에 활용됩니다.
-
-### 서버가 재시작을 반복하는 경우
+**게시글 신고하기 (인증 필요)**
 ```bash
-# 로그 확인
-docker-compose logs --tail=100 community-api
+# 1. 로그인하여 토큰 받기
+TOKEN=$(curl -s -X POST http://54.180.251.210:8080/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"test@example.com","password":"Password123@"}' \
+  | grep -o '"accessToken":"[^"]*' | cut -d'"' -f4)
 
-# PostRepository 에러인 경우
-# PostRepository에서 PostRepositoryCustom 상속 제거 확인:
-# public interface PostRepository extends JpaRepository<Post, Long>
+# 2. 게시글 신고 (스팸)
+curl -X POST "http://54.180.251.210:8080/api/v1/reports?currentUserId=1" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{
+    "targetType": "POST",
+    "targetId": 1,
+    "reason": "SPAM",
+    "description": "스팸성 광고 게시글입니다."
+  }'
+
+# 3. 댓글 신고 (욕설)
+curl -X POST "http://54.180.251.210:8080/api/v1/reports?currentUserId=1" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{
+    "targetType": "COMMENT",
+    "targetId": 10,
+    "reason": "ABUSE",
+    "description": "욕설이 포함된 댓글입니다."
+  }'
+
+# 4. 사용자 신고 (혐오 발언)
+curl -X POST "http://54.180.251.210:8080/api/v1/reports?currentUserId=1" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{
+    "targetType": "USER",
+    "targetId": 3,
+    "reason": "HATE_SPEECH",
+    "description": "지속적으로 혐오 발언을 합니다."
+  }'
 ```
 
-### 비밀번호 유효성 검증 실패 (400 Bad Request)
+**응답 예시 (신고 생성):**
 ```json
 {
   "success": true,
   "data": {
-    "message": "입력 값이 올바르지 않습니다",
-    "fieldErrors": [
-      {
-        "field": "password",
-        "rejectedValue": "password123",
-        "message": "비밀번호는 대소문자, 숫자, 특수문자(@$!%*?&)를 포함한 8~20자여야 합니다"
-      }
-    ]
+    "id": 1,
+    "reporterId": 1,
+    "reportedUserId": 2,
+    "targetType": "POST",
+    "targetId": 5,
+    "reason": "SPAM",
+    "description": "스팸성 광고 게시글입니다.",
+    "status": "PENDING",
+    "reviewerId": null,
+    "reviewComment": null,
+    "reviewedAt": null,
+    "actionTaken": null,
+    "createdAt": "2025-12-22T18:00:00",
+    "updatedAt": "2025-12-22T18:00:00"
+  },
+  "message": "신고가 접수되었습니다",
+  "timestamp": "2025-12-22T18:00:00"
+}
+```
+
+**신고 조회 및 관리**
+```bash
+# 신고 상세 조회
+curl "http://54.180.251.210:8080/api/v1/reports/1" \
+  -H "Authorization: Bearer $TOKEN"
+
+# 내가 신고한 목록 조회
+curl "http://54.180.251.210:8080/api/v1/reports/me?currentUserId=1" \
+  -H "Authorization: Bearer $TOKEN"
+
+# 특정 게시글에 대한 신고 목록 조회
+curl "http://54.180.251.210:8080/api/v1/reports/target/POST/1" \
+  -H "Authorization: Bearer $TOKEN"
+
+# 특정 댓글에 대한 신고 수 조회
+curl "http://54.180.251.210:8080/api/v1/reports/statistics/target/COMMENT/1/count" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+**관리자 신고 관리 (관리자 전용)**
+```bash
+# 1. 대기 중인 신고 목록 조회
+curl "http://54.180.251.210:8080/api/v1/reports/pending?page=0&size=20" \
+  -H "Authorization: Bearer $TOKEN"
+
+# 2. 고위험 신고 목록 조회 (음란물, 폭력, 혐오발언 등)
+curl "http://54.180.251.210:8080/api/v1/reports/high-severity?page=0&size=20" \
+  -H "Authorization: Bearer $TOKEN"
+
+# 3. 상태별 신고 목록 조회 (PENDING, IN_REVIEW, APPROVED, REJECTED)
+curl "http://54.180.251.210:8080/api/v1/reports/status/PENDING?page=0&size=20" \
+  -H "Authorization: Bearer $TOKEN"
+
+# 4. 신고 검토 시작 (관리자 ID: 1)
+curl -X POST "http://54.180.251.210:8080/api/v1/reports/1/review/start?currentUserId=1" \
+  -H "Authorization: Bearer $TOKEN"
+
+# 5. 신고 승인 및 조치
+curl -X POST "http://54.180.251.210:8080/api/v1/reports/1/approve?currentUserId=1" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{
+    "reviewComment": "스팸 게시글로 확인되어 삭제 조치했습니다.",
+    "actionTaken": "게시글 삭제 + 작성자 경고"
+  }'
+
+# 6. 신고 반려
+curl -X POST "http://54.180.251.210:8080/api/v1/reports/2/reject?currentUserId=1" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{
+    "reviewComment": "신고 내용이 부적절하여 반려합니다."
+  }'
+
+# 7. 신고 통계 조회
+curl "http://54.180.251.210:8080/api/v1/reports/statistics" \
+  -H "Authorization: Bearer $TOKEN"
+
+# 8. 기간별 신고 수 조회
+curl "http://54.180.251.210:8080/api/v1/reports/statistics/count?startDate=2025-12-01T00:00:00&endDate=2025-12-31T23:59:59" \
+  -H "Authorization: Bearer $TOKEN"
+
+# 9. 특정 사용자에 대한 신고 목록 조회
+curl "http://54.180.251.210:8080/api/v1/reports/user/3?page=0&size=20" \
+  -H "Authorization: Bearer $TOKEN"
+
+# 10. 대상 유형별 신고 목록 (POST, COMMENT, USER, CHAT)
+curl "http://54.180.251.210:8080/api/v1/reports/type/POST?page=0&size=20" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+**응답 예시 (신고 통계):**
+```json
+{
+  "success": true,
+  "data": {
+    "totalReports": 150,
+    "pendingReports": 25,
+    "inReviewReports": 10,
+    "approvedReports": 100,
+    "rejectedReports": 15,
+    "highSeverityReports": 8
   }
 }
 ```
-→ 비밀번호 규칙 확인:
-- 길이: 8~20자
-- 대문자, 소문자, 숫자 각각 1개 이상 필수
-- 특수문자 필수 (허용: `@ $ ! % * ? &`)
-- **주의**: `#` 등 다른 특수문자는 사용 불가!
 
-### 회원가입 시 중복 이메일 에러
-```json
-{
-  "success": false,
-  "message": "이미 사용중인 이메일입니다: test@example.com",
-  "errorCode": "DUPLICATE_USER"
-}
-```
-→ 다른 이메일 주소로 시도하거나, H2 콘솔에서 데이터 삭제 후 재시도
+**신고 사유 종류 (ReportReason):**
+- **SPAM**: 스팸/광고 (심각도: 10)
+- **ABUSE**: 욕설/비방 (심각도: 50)
+- **SEXUAL**: 음란물 (심각도: 100) - 고위험
+- **VIOLENCE**: 폭력적 콘텐츠 (심각도: 80) - 고위험
+- **HATE_SPEECH**: 혐오 발언 (심각도: 100) - 고위험
+- **MISINFORMATION**: 허위 정보 (심각도: 30)
+- **COPYRIGHT**: 저작권 침해 (심각도: 20)
+- **PERSONAL_INFO**: 개인정보 노출 (심각도: 70) - 고위험
+- **ILLEGAL_CONTENT**: 불법 콘텐츠 (심각도: 100) - 고위험
+- **ETC**: 기타 (심각도: 5)
 
-### 로그인 실패 (401 Unauthorized)
-```json
-{
-  "success": false,
-  "message": "이메일 또는 비밀번호가 일치하지 않습니다",
-  "errorCode": "AUTHENTICATION_FAILED"
-}
-```
-→ 이메일/비밀번호 확인 또는 회원가입 먼저 진행
+**신고 상태 (ReportStatus):**
+- **PENDING**: 접수 (신고 접수됨, 검토 대기 중)
+- **IN_REVIEW**: 검토중 (관리자가 신고 검토 중)
+- **APPROVED**: 승인 (신고 승인, 조치 완료)
+- **REJECTED**: 반려 (신고 반려)
 
----
-
-## 🛑 서버 중지
-
-```bash
-# 컨테이너 중지
-docker-compose down
-
-# 이미지까지 삭제
-docker-compose down --rmi local
-
-# 데이터베이스 초기화 (H2는 메모리DB라 재시작 시 자동 초기화)
-docker-compose restart community-api
-```
-
----
-
-## 📊 모니터링
-
-### 컨테이너 상태 확인
-```bash
-docker-compose ps
-```
-
-### 로그 실시간 확인
-```bash
-docker-compose logs -f community-api
-```
-
-### 리소스 사용량 확인
-```bash
-docker stats
-```
+**신고 대상 유형 (ReportTargetType):**
+- **POST**: 게시글
+- **COMMENT**: 댓글
+- **CHAT**: 채팅 (미구현)
+- **USER**: 사용자
 
 ---
 
@@ -1150,7 +1147,7 @@ com.community.platform
 │   ├── infrastructure.persistence
 │   ├── dto
 │   └── exception
-├── user             # 사용자 도메인 ✅ 복구 완료
+├── user             # 사용자 도메인 
 │   ├── domain
 │   ├── application  # UserService, AuthService
 │   ├── presentation.web  # UserController, AuthController
@@ -1161,6 +1158,7 @@ com.community.platform
 ├── notification     # 알림 도메인
 ├── authorization    # 권한 도메인
 ├── reward           # 보상 도메인
+├── moderation       # 중재 도메인 (신고)
 └── shared           # 공통 코드
     ├── domain
     ├── security
@@ -1236,7 +1234,7 @@ com.community.platform
 6. ✅ 포인트 랭킹 및 통계 기능
 7. ✅ 관리자 포인트 지급/차감 기능
 
-### ✅ Phase 6-2: RBAC - 역할 기반 접근 제어 (완료 - 2025-12-22) ✨ NEW!
+### ✅ Phase 6-2: RBAC - 역할 기반 접근 제어 (완료 - 2025-12-22)
 1. ✅ UserRole enum 구현 (5단계 역할 시스템)
 2. ✅ Permission enum 구현 (29개 세부 권한)
 3. ✅ User 엔티티에 role 필드 추가
@@ -1245,6 +1243,17 @@ com.community.platform
 6. ✅ 권한 확인 및 검증 기능
 7. ✅ 관리자 역할 변경 기능
 8. ⏳ Spring Security 통합 (다음 단계)
+
+### ✅ Phase 6-3: 신고 관리 시스템 (완료 - 2025-12-22) ✨ NEW!
+1. ✅ 도메인 모델 설계 (Report, ReportTargetType, ReportStatus, ReportReason)
+2. ✅ 신고 생성 및 중복 체크 기능
+3. ✅ 신고 대상 유형 (게시글, 댓글, 사용자, 채팅)
+4. ✅ 신고 사유 및 심각도 시스템 (9가지 사유, 심각도 점수)
+5. ✅ 신고 상태 관리 (접수, 검토중, 승인, 반려)
+6. ✅ 고위험 신고 자동 분류 (심각도 70+ 신고)
+7. ✅ 관리자 신고 검토 및 처리 기능
+8. ✅ 신고 통계 및 리포트 기능
+9. ✅ 신고 처리 도메인 이벤트 (생성, 검토시작, 승인, 반려)
 
 **역할 시스템 (5단계):**
 - **USER** (일반 유저): 기본 권한 (게시글/댓글 읽기, 작성, 자신의 콘텐츠 수정/삭제, 좋아요, 스크랩, 신고)
@@ -1290,126 +1299,3 @@ com.community.platform
 - 신고 패널티: -100점
 
 ---
-
-## 🎉 테스트 시나리오
-
-### 현재 가능한 전체 워크플로우 ✨ 스크랩 기능 추가!
-
-```bash
-# 1. 회원가입
-curl -X POST http://54.180.251.210:8080/api/v1/users/register \
-  -H "Content-Type: application/json" \
-  -d '{"email":"user1@test.com","password":"Test1234@","nickname":"user1"}'
-
-# 2. 로그인 (JWT 토큰 받기)
-TOKEN=$(curl -s -X POST http://54.180.251.210:8080/api/v1/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"email":"user1@test.com","password":"Test1234@"}' \
-  | grep -o '"accessToken":"[^"]*' | cut -d'"' -f4)
-
-# 3. 카테고리 생성 (관리자용)
-curl -X POST "http://54.180.251.210:8080/api/v1/categories?name=General&description=General%20discussion%20board"
-
-# 4. 게시글 작성
-curl -X POST "http://54.180.251.210:8080/api/v1/posts?currentUserId=1" \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer $TOKEN" \
-  -d '{
-    "categoryId": 1,
-    "title": "커뮤니티 플랫폼 테스트",
-    "content": "DDD 기반 커뮤니티 플랫폼 API 테스트입니다!",
-    "contentType": "MARKDOWN",
-    "tags": ["테스트", "DDD", "SpringBoot"]
-  }'
-
-# 5. 게시글 발행
-curl -X POST "http://54.180.251.210:8080/api/v1/posts/1/publish?currentUserId=1" \
-  -H "Authorization: Bearer $TOKEN"
-
-# 6. 게시글 목록 조회 (인증 불필요)
-curl "http://54.180.251.210:8080/api/v1/posts"
-
-# 7. 게시글 상세 조회 (조회수 증가)
-curl "http://54.180.251.210:8080/api/v1/posts/1"
-
-# 8. 댓글 작성
-curl -X POST "http://54.180.251.210:8080/api/v1/comments?currentUserId=1" \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer $TOKEN" \
-  -d '{
-    "postId": 1,
-    "content": "좋은 게시글이네요!"
-  }'
-
-# 9. 대댓글 작성
-curl -X POST "http://54.180.251.210:8080/api/v1/comments?currentUserId=1" \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer $TOKEN" \
-  -d '{
-    "postId": 1,
-    "parentCommentId": 1,
-    "content": "저도 동감합니다!"
-  }'
-
-# 10. 댓글 목록 조회 (계층형)
-curl "http://54.180.251.210:8080/api/v1/comments/posts/1"
-
-# 11. 게시글 좋아요
-curl -X POST "http://54.180.251.210:8080/api/v1/posts/1/like?currentUserId=1" \
-  -H "Authorization: Bearer $TOKEN"
-
-# 12. 좋아요 상태 확인
-curl "http://54.180.251.210:8080/api/v1/posts/1/like/status?currentUserId=1"
-
-# 13. 게시글 스크랩 ✨ NEW!
-curl -X POST "http://54.180.251.210:8080/api/v1/posts/1/scrap?currentUserId=1" \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer $TOKEN" \
-  -d '{
-    "postId": 1,
-    "folderId": null
-  }'
-
-# 14. 스크랩 폴더 생성 ✨ NEW!
-curl -X POST "http://54.180.251.210:8080/api/v1/scrap-folders?currentUserId=1" \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer $TOKEN" \
-  -d '{
-    "name": "개발 자료",
-    "description": "개발 관련 게시글 모음"
-  }'
-
-# 15. 내 스크랩 목록 조회 ✨ NEW!
-curl "http://54.180.251.210:8080/api/v1/posts/scraps/me?currentUserId=1"
-
-# 16. 인기 게시글 조회
-curl "http://54.180.251.210:8080/api/v1/posts/popular?days=7"
-
-# 17. 카테고리 조회
-curl http://54.180.251.210:8080/api/v1/categories/tree
-
-# 18. 로그아웃
-curl -X POST http://54.180.251.210:8080/api/v1/auth/logout \
-  -H "Authorization: Bearer $TOKEN"
-```
-
----
-
-**Happy Coding! 🚀**
-
-**최종 업데이트**: 2025-12-22
-- ✅ **역할 기반 접근 제어 (RBAC) 시스템 완료** (UserRole, Permission, RoleService, RoleController) ✨ NEW!
-- ✅ **포인트 & 레벨 시스템 완료** (UserPoint, UserLevel, PointService, PointController) ✨ NEW!
-- ✅ **스크랩 관리 기능 완전 복구** (PostScrapService, ScrapFolderService, Controllers)
-- ✅ **좋아요 관리 기능 완전 복구** (PostLikeService, PostLikeController)
-- ✅ **댓글 관리 기능 완전 복구** (CommentService, CommentController)
-- ✅ **Redis 연동 완료** (AWS ElastiCache 연결)
-- ✅ RBAC: 5단계 역할 시스템, 29개 세부 권한, 레벨 기반 자동 승격
-- ✅ 포인트: 10단계 레벨, 일일 한도, 거래 내역, 랭킹, 관리자 지급/차감
-- ✅ 스크랩 추가/취소, 폴더 관리, 검색, 통계 API 사용 가능
-- ✅ 좋아요 토글, 상태 확인, 목록 조회 API 사용 가능
-- ✅ 댓글/대댓글 CRUD, 계층형 구조, 검색 API 사용 가능
-- ✅ 게시글 CRUD, 검색, 발행, 인기글, 트렌딩 API 사용 가능
-- ✅ QueryDSL 기반 복합 검색 및 동적 쿼리 정상 작동
-- ✅ 회원가입/로그인 → 게시글 작성 → 댓글 → 좋아요 → 스크랩 전체 워크플로우 테스트 가능
-- ✅ JWT 토큰 기반 인증 시스템 작동 확인
