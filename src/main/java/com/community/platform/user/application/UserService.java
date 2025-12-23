@@ -53,11 +53,14 @@ public class UserService {
         // 사용자 생성 및 저장
         User user = User.register(email, encryptedPassword, nickname);
         User savedUser = userRepository.save(user);
-        
+
         // 기본 프로필 생성
         UserProfile profile = UserProfile.createFor(savedUser);
         userProfileRepository.save(profile);
-        
+
+        // 회원가입 이벤트 추가 (ID가 생성된 후)
+        savedUser.publishRegisteredEvent();
+
         // 도메인 이벤트 발행 (회원가입 완료)
         domainEventService.publishEvents(savedUser);
         

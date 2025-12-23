@@ -5,7 +5,7 @@ import com.community.platform.moderation.domain.UserPenalty;
 import com.community.platform.moderation.dto.PenaltyCheckResponse;
 import com.community.platform.moderation.dto.PenaltyCreateRequest;
 import com.community.platform.moderation.dto.PenaltyResponse;
-import com.community.platform.shared.presentation.ApiResponse;
+import com.community.platform.shared.dto.ApiResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

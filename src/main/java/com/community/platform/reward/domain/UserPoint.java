@@ -1,6 +1,6 @@
 package com.community.platform.reward.domain;
 
-import com.community.platform.shared.domain.BaseEntity;
+import com.community.platform.shared.domain.AggregateRoot;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -23,7 +23,7 @@ import java.time.LocalDate;
        })
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class UserPoint extends BaseEntity {
+public class UserPoint extends AggregateRoot {
 
     @Column(name = "user_id", nullable = false, unique = true)
     private Long userId;
@@ -169,8 +169,16 @@ public class UserPoint extends BaseEntity {
     private void updateLevel() {
         UserLevel newLevel = UserLevel.fromPoints(this.totalPoints);
         if (newLevel != this.currentLevel) {
+            UserLevel oldLevel = this.currentLevel;
             this.currentLevel = newLevel;
-            // TODO: 레벨업 이벤트 발행
+
+            // 레벨업 이벤트 발행 (알림용)
+            addDomainEvent(new UserLevelUpEvent(
+                    this.userId,
+                    oldLevel,
+                    newLevel,
+                    this.totalPoints.longValue()
+            ));
         }
     }
 

@@ -51,18 +51,46 @@
 
 ✅ **구현 완료**
 - 신고 관리 시스템 ✨ NEW!
+- 사용자 제재 & 패널티 시스템 ✨ NEW! (Phase 1)
+- 알림 시스템 ✨ NEW! (Phase 3)
 
 🚧 **진행 중** (Phase 6)
 - 콘텐츠 필터링
 - 공지사항 & 큐레이션
 
 🔴 **미구현**
-- 알림 시스템
-- 실시간 기능
+- 실시간 기능 (WebSocket/SSE)
 
 ---
 
-## ⚠️ 현재 빌드 상태
+## ⚠️ 빌드 방법 참고!!
+docker-compose down && docker build --no-cache -t community-platform
+
+Bash(./gradlew clean build -x test) timeout: 3m 0s
+  ⎿  Error: Exit code 127
+     /bin/bash: line 1: ./gradlew: No such file or directory
+
+● Bash(./gradlew clean build -x test) timeout: 3m 0s
+  ⎿  Error: Exit code 127
+     /bin/bash: line 1: ./gradlew: No such file or directory
+
+● Bash(ls -la | grep gradle)
+  ⎿  drwxr-xr-x.  5 ec2-user ec2-user    56 Dec 21 05:13 .gradle     
+     -rw-r--r--.  1 ec2-user ec2-user  3728 Dec 22 13:04 build.gradle
+
+● Bash(docker build --no-cache -t community-platform .) timeout: 5m 0s
+  ⎿  Error: Exit code 1
+     #0 building with "default" instance using docker driver
+
+     #1 [internal] load build definition from Dockerfile
+     #1 transferring dockerfile: 1.54kB done
+     #1 DONE 0.0s
+
+     #2 [internal] load metadata for docker.io/library/gradle:8.5-jdk17-alpine
+     #2 DONE 0.6s
+
+
+
 
 ### ✅ 모든 주요 API 활성화 완료!
 모든 핵심 기능의 컨트롤러가 활성화되어 정상적으로 작동합니다.
@@ -75,7 +103,7 @@
 - **POST** `/api/v1/auth/refresh` - 토큰 갱신
 - **POST** `/api/v1/auth/logout` - 로그아웃 (인증 필요)
 
-#### 📝 **게시글 API** (PostController, PostService) ✨ NEW!
+#### 📝 **게시글 API** (PostController, PostService) 
 - **GET** `/api/v1/posts` - 게시글 목록 조회
 - **GET** `/api/v1/posts/{postId}` - 게시글 상세 조회
 - **POST** `/api/v1/posts` - 게시글 작성 (인증 필요)
@@ -121,7 +149,7 @@
 - **GET** `/api/v1/posts/{postId}/likes` - 게시글 좋아요한 사용자 목록 조회
 - **GET** `/api/v1/posts/likes/me?currentUserId={userId}` - 내가 좋아요한 게시글 목록 조회
 
-#### 📌 **스크랩 API** (PostScrapController, PostScrapService) ✨ NEW!
+#### 📌 **스크랩 API** (PostScrapController, PostScrapService) 
 - **POST** `/api/v1/posts/{postId}/scrap?currentUserId={userId}` - 게시글 스크랩 (인증 필요)
 - **DELETE** `/api/v1/posts/{postId}/scrap?currentUserId={userId}` - 게시글 스크랩 취소 (인증 필요)
 - **GET** `/api/v1/posts/{postId}/scrap/status?currentUserId={userId}` - 스크랩 상태 확인
@@ -141,7 +169,7 @@
 - **GET** `/api/v1/scrap-folders/me/empty?currentUserId={userId}` - 빈 스크랩 폴더 조회
 - **POST** `/api/v1/scrap-folders/{folderId}/set-default?currentUserId={userId}` - 기본 폴더 설정
 
-#### 🎁 **포인트 API** (PointController, PointService) ✨ NEW!
+#### 🎁 **포인트 API** (PointController, PointService) 
 - **GET** `/api/v1/points/me?currentUserId={userId}` - 내 포인트 정보 조회
 - **GET** `/api/v1/points/me/transactions?currentUserId={userId}` - 내 포인트 거래 내역 조회
 - **GET** `/api/v1/points/me/transactions/period?startDate={date}&endDate={date}` - 기간별 거래 내역
@@ -150,12 +178,12 @@
 - **GET** `/api/v1/points/statistics/levels` - 레벨별 사용자 통계
 - **GET** `/api/v1/points/statistics/total` - 전체 포인트 통계
 
-#### 🎁 **관리자 포인트 API** ✨ NEW!
+#### 🎁 **관리자 포인트 API** 
 - **POST** `/api/v1/points/admin/adjust?currentUserId={adminId}` - 포인트 지급/차감 (관리자 전용)
 - **GET** `/api/v1/points/admin/users/{userId}` - 사용자 포인트 조회 (관리자 전용)
 - **GET** `/api/v1/points/admin/users/level/{level}` - 레벨별 사용자 조회 (관리자 전용)
 
-#### 👑 **역할 및 권한 API** (RoleController, RoleService) ✨ NEW!
+#### 👑 **역할 및 권한 API** (RoleController, RoleService) 
 - **GET** `/api/v1/roles` - 모든 역할 정보 조회
 - **GET** `/api/v1/roles/{role}` - 특정 역할 정보 조회
 - **GET** `/api/v1/roles/permissions` - 모든 권한 정보 조회
@@ -163,12 +191,12 @@
 - **GET** `/api/v1/roles/check-permission?userId={id}&permission={perm}` - 사용자 권한 확인
 - **GET** `/api/v1/roles/statistics` - 역할별 사용자 통계
 
-#### 👑 **관리자 역할 관리 API** ✨ NEW!
+#### 👑 **관리자 역할 관리 API** 
 - **POST** `/api/v1/roles/admin/change?currentUserId={adminId}` - 사용자 역할 변경 (관리자 전용)
 - **GET** `/api/v1/roles/admin/{role}/users` - 역할별 사용자 목록 (관리자 전용)
 - **GET** `/api/v1/roles/admin/admins` - 관리자 목록 조회 (관리자 전용)
 
-#### 🚨 **신고 API** (ReportController, ReportService) ✨ NEW!
+#### 🚨 **신고 API** (ReportController, ReportService) 
 - **POST** `/api/v1/reports?currentUserId={userId}` - 신고 생성 (인증 필요)
 - **GET** `/api/v1/reports/{reportId}` - 신고 상세 조회
 - **GET** `/api/v1/reports/pending` - 대기 중인 신고 목록 (관리자 전용)
@@ -185,7 +213,7 @@
 - **GET** `/api/v1/reports/statistics/count?startDate={date}&endDate={date}` - 기간별 신고 수 (관리자 전용)
 - **GET** `/api/v1/reports/statistics/target/{targetType}/{targetId}/count` - 대상별 신고 수 조회
 
-#### 🔨 **사용자 제재 API** (PenaltyController, UserPenaltyService) ✨ NEW!
+#### 🔨 **사용자 제재 API** (PenaltyController, UserPenaltyService) 
 - **POST** `/api/v1/penalties?currentUserId={adminId}` - 수동 제재 부여 (관리자 전용)
 - **GET** `/api/v1/penalties/user/{userId}` - 사용자 제재 이력 조회
 - **GET** `/api/v1/penalties/user/{userId}/active` - 사용자 활성 제재 조회
@@ -193,6 +221,16 @@
 - **DELETE** `/api/v1/penalties/{penaltyId}?currentUserId={adminId}` - 제재 해제 (관리자 전용)
 - **GET** `/api/v1/penalties/users/{userId}/can-post` - 글쓰기 가능 여부 확인
 - **GET** `/api/v1/penalties/users/{userId}/can-comment` - 댓글 작성 가능 여부 확인
+
+#### 🔔 **알림 API** (NotificationController, NotificationService) ✨ NEW!
+- **GET** `/api/v1/notifications?currentUserId={userId}` - 내 알림 목록 조회 (인증 필요)
+- **GET** `/api/v1/notifications/unread?currentUserId={userId}` - 읽지 않은 알림 목록 조회 (인증 필요)
+- **GET** `/api/v1/notifications/unread-count?currentUserId={userId}` - 읽지 않은 알림 개수 조회 (인증 필요)
+- **PUT** `/api/v1/notifications/{notificationId}/read?currentUserId={userId}` - 알림 읽음 처리 (인증 필요)
+- **PUT** `/api/v1/notifications/read-all?currentUserId={userId}` - 모든 알림 읽음 처리 (인증 필요)
+- **DELETE** `/api/v1/notifications/{notificationId}?currentUserId={userId}` - 알림 삭제 (인증 필요)
+- **GET** `/api/v1/notifications/preferences?currentUserId={userId}` - 알림 설정 조회 (인증 필요)
+- **PUT** `/api/v1/notifications/preferences?currentUserId={userId}` - 알림 설정 변경 (인증 필요)
 
 #### 💊 **Health Check**
 - **GET** `/actuator/health` - 서버 상태 확인
@@ -621,20 +659,24 @@ curl -X DELETE "http://54.180.251.210:8080/api/v1/posts/1/scrap?currentUserId=1"
   -H "Authorization: Bearer $TOKEN"
 
 # 스크랩 상태 확인
-curl "http://54.180.251.210:8080/api/v1/posts/1/scrap/status?currentUserId=1"
+curl "http://54.180.251.210:8080/api/v1/posts/1/scrap/status?currentUserId=1" \
+  -H "Authorization: Bearer $TOKEN"
 
 # 게시글 스크랩 수 조회
-curl "http://54.180.251.210:8080/api/v1/posts/1/scrap/count"
+curl "http://54.180.251.210:8080/api/v1/posts/1/scrap/count" \
+  -H "Authorization: Bearer $TOKEN"
 
 # 내 스크랩 목록 조회
-curl "http://54.180.251.210:8080/api/v1/posts/scraps/me?currentUserId=1"
+curl "http://54.180.251.210:8080/api/v1/posts/scraps/me?currentUserId=1" \
+  -H "Authorization: Bearer $TOKEN"
 
 # 스크랩 폴더 이동
 curl -X PUT "http://54.180.251.210:8080/api/v1/posts/1/scrap/move?currentUserId=1&targetFolderId=2" \
   -H "Authorization: Bearer $TOKEN"
 
 # 스크랩 검색
-curl "http://54.180.251.210:8080/api/v1/posts/scraps/me/search?currentUserId=1&keyword=테스트"
+curl "http://54.180.251.210:8080/api/v1/posts/scraps/me/search?currentUserId=1&keyword=테스트" \
+  -H "Authorization: Bearer $TOKEN"
 ```
 
 ### 11. 스크랩 폴더 관리 테스트 (폴더 기능) ✨ NEW!
@@ -680,10 +722,12 @@ curl -X POST "http://54.180.251.210:8080/api/v1/scrap-folders?currentUserId=1" \
 **스크랩 폴더 관리**
 ```bash
 # 내 스크랩 폴더 목록 조회
-curl "http://54.180.251.210:8080/api/v1/scrap-folders/me?currentUserId=1"
+curl "http://54.180.251.210:8080/api/v1/scrap-folders/me?currentUserId=1" \
+  -H "Authorization: Bearer $TOKEN"
 
 # 특정 폴더 상세 조회
-curl "http://54.180.251.210:8080/api/v1/scrap-folders/2?currentUserId=1"
+curl "http://54.180.251.210:8080/api/v1/scrap-folders/2?currentUserId=1" \
+  -H "Authorization: Bearer $TOKEN"
 
 # 폴더 수정
 curl -X PUT "http://54.180.251.210:8080/api/v1/scrap-folders/2?currentUserId=1" \
@@ -698,7 +742,8 @@ curl -X PUT "http://54.180.251.210:8080/api/v1/scrap-folders/2?currentUserId=1" 
 curl "http://54.180.251.210:8080/api/v1/posts/scrap-folders/2/scraps?currentUserId=1"
 
 # 빈 폴더 목록 조회
-curl "http://54.180.251.210:8080/api/v1/scrap-folders/me/empty?currentUserId=1"
+curl "http://54.180.251.210:8080/api/v1/scrap-folders/me/empty?currentUserId=1" \
+  -H "Authorization: Bearer $TOKEN"
 
 # 폴더 삭제 (스크랩은 기본 폴더로 이동)
 curl -X DELETE "http://54.180.251.210:8080/api/v1/scrap-folders/2?currentUserId=1&moveToDefault=true" \
@@ -1095,7 +1140,7 @@ curl "http://54.180.251.210:8080/api/v1/reports/statistics/count?startDate=2025-
   -H "Authorization: Bearer $TOKEN"
 
 # 9. 특정 사용자에 대한 신고 목록 조회
-curl "http://54.180.251.210:8080/api/v1/reports/user/3?page=0&size=20" \
+curl "http://54.180.251.210:8080/api/v1/reports/user/2?page=0&size=20" \
   -H "Authorization: Bearer $TOKEN"
 
 # 10. 대상 유형별 신고 목록 (POST, COMMENT, USER, CHAT)
@@ -1237,10 +1282,12 @@ curl -X DELETE "http://54.180.251.210:8080/api/v1/penalties/1?currentUserId=1" \
 **제재 확인 API**
 ```bash
 # 글쓰기 가능 여부 확인
-curl "http://54.180.251.210:8080/api/v1/penalties/users/2/can-post"
+curl "http://54.180.251.210:8080/api/v1/penalties/users/2/can-post" \
+  -H "Authorization: Bearer $TOKEN"
 
 # 댓글 작성 가능 여부 확인
-curl "http://54.180.251.210:8080/api/v1/penalties/users/2/can-comment"
+curl "http://54.180.251.210:8080/api/v1/penalties/users/2/can-comment" \
+  -H "Authorization: Bearer $TOKEN"
 ```
 
 **응답 예시 (제재 확인):**
@@ -1258,7 +1305,7 @@ curl "http://54.180.251.210:8080/api/v1/penalties/users/2/can-comment"
 
 **제재 중 글쓰기 시도 시 에러:**
 ```bash
-# 제재 중인 사용자가 게시글 작성 시도
+# 제재 중인 사용자가 게시글 작성 시도 - 에러 try catch 문 필요
 curl -X POST "http://54.180.251.210:8080/api/v1/posts?currentUserId=2" \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $TOKEN" \
@@ -1946,3 +1993,275 @@ curl 'http://54.180.251.210:8080/api/v1/posts/10?currentUserId=1'
 - ✅ PostRestoredEvent 발행으로 알림 시스템 연동 준비
 
 ---
+
+### 17. 알림 시스템 테스트 (이벤트 기반 실시간 알림) ✨ NEW!
+
+**Phase 3에서 추가된 알림 시스템:**
+1. 도메인 이벤트 기반 자동 알림 발송
+2. 사용자별 알림 설정 (ON/OFF 가능)
+3. 댓글, 좋아요, 스크랩, 신고, 레벨업, 제재 알림
+4. 읽음/읽지 않음 상태 관리
+
+---
+
+#### 17.1 알림 타입 (NotificationType)
+
+| 알림 타입 | 설명 | 발송 조건 |
+|---|---|---|
+| COMMENT_ON_POST | 내 글에 댓글 | 내 게시글에 댓글이 달렸을 때 |
+| REPLY_ON_COMMENT | 댓글에 답글 | 내 댓글에 대댓글이 달렸을 때 |
+| LIKE_ON_POST | 게시글 좋아요 | 내 게시글에 좋아요가 눌렸을 때 |
+| SCRAP_ON_POST | 게시글 스크랩 | 내 게시글이 스크랩되었을 때 |
+| REPORT_APPROVED | 신고 승인 | 내가 신고한 콘텐츠가 삭제되었을 때 |
+| REPORT_REJECTED | 신고 반려 | 내가 신고한 내용이 반려되었을 때 |
+| PENALTY_APPLIED | 제재 통보 | 나에게 제재가 부여되었을 때 |
+| PENALTY_EXPIRED | 제재 해제 | 나의 제재가 해제되었을 때 |
+| LEVEL_UP | 레벨 업 | 레벨이 상승했을 때 |
+| SYSTEM_NOTICE | 시스템 공지 | 시스템 공지 (항상 수신) |
+
+---
+
+#### 17.2 알림 API 엔드포인트
+
+**알림 목록 조회:**
+```bash
+# 내 알림 목록 조회
+GET /api/v1/notifications?currentUserId=1&page=0&size=20
+
+# 읽지 않은 알림만 조회
+GET /api/v1/notifications/unread?currentUserId=1&page=0&size=20
+
+# 읽지 않은 알림 개수
+GET /api/v1/notifications/unread-count?currentUserId=1
+```
+
+**알림 읽음 처리:**
+```bash
+# 개별 알림 읽음 처리
+PUT /api/v1/notifications/{notificationId}/read?currentUserId=1
+
+# 모든 알림 일괄 읽음 처리
+PUT /api/v1/notifications/read-all?currentUserId=1
+
+# 알림 삭제
+DELETE /api/v1/notifications/{notificationId}?currentUserId=1
+```
+
+**알림 설정 관리:**
+```bash
+# 알림 설정 조회
+GET /api/v1/notifications/preferences?currentUserId=1
+
+# 알림 설정 변경
+PUT /api/v1/notifications/preferences?currentUserId=1
+Content-Type: application/json
+{
+  "notifyComment": true,
+  "notifyReply": true,
+  "notifyLike": false,
+  "notifyScrap": false,
+  "notifyReportResult": true,
+  "notifyLevelUp": true,
+  "notifyPenalty": true
+}
+```
+
+---
+
+#### 17.3 알림 발송 시나리오 (자동 이벤트 기반)
+
+**시나리오 1: 댓글 작성 → 자동 알림 발송**
+
+```bash
+# 1. 사용자 1이 게시글 작성 및 발행
+curl -X POST 'http://54.180.251.210:8080/api/v1/posts?currentUserId=1' \
+  -H 'Content-Type: application/json' \
+  -d '{"categoryId": 1, "title": "테스트", "content": "댓글 테스트", "contentType": "MARKDOWN"}'
+
+curl -X POST 'http://54.180.251.210:8080/api/v1/posts/20/publish?currentUserId=1'
+
+# 2. 사용자 2가 댓글 작성 (CommentCreatedEvent 자동 발행)
+curl -X POST 'http://54.180.251.210:8080/api/v1/posts/20/comments?currentUserId=2' \
+  -H 'Content-Type: application/json' \
+  -d '{"content": "좋은 글이네요!"}'
+
+# 3. 사용자 1의 알림 확인 (자동으로 알림 생성됨!)
+curl 'http://54.180.251.210:8080/api/v1/notifications?currentUserId=1'
+
+# 응답:
+{
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "userId": 1,
+      "type": "COMMENT_ON_POST",
+      "title": "새 댓글",
+      "content": "회원님의 게시글에 댓글이 달렸습니다",
+      "relatedId": 1,
+      "relatedType": "COMMENT",
+      "isRead": false,
+      "readAt": null,
+      "createdAt": "2025-01-15T10:00:00"
+    }
+  ]
+}
+```
+
+**시나리오 2: 좋아요 → 자동 알림**
+
+```bash
+# 사용자 2가 게시글에 좋아요 (LikeCreatedEvent 발행)
+curl -X POST 'http://54.180.251.210:8080/api/v1/posts/20/like?currentUserId=2'
+
+# 사용자 1의 알림 확인
+curl 'http://54.180.251.210:8080/api/v1/notifications?currentUserId=1'
+
+# 응답: 좋아요 알림 자동 생성
+{
+  "success": true,
+  "data": [
+    {
+      "type": "LIKE_ON_POST",
+      "title": "좋아요",
+      "content": "회원님의 게시글을 좋아합니다",
+      "relatedId": 20,
+      "relatedType": "POST",
+      ...
+    }
+  ]
+}
+```
+
+**시나리오 3: 레벨업 → 자동 알림**
+
+```bash
+# 포인트 획득으로 레벨업 (UserLevelUpEvent 자동 발행)
+# 예: 595점 → 610점으로 증가하여 LEVEL_3 달성
+
+curl 'http://54.180.251.210:8080/api/v1/notifications?currentUserId=1'
+
+# 응답: 레벨업 알림 자동 생성
+{
+  "success": true,
+  "data": [
+    {
+      "type": "LEVEL_UP",
+      "title": "레벨 업!",
+      "content": "축하합니다! 단골이(가) 되셨습니다 (포인트: 610)",
+      "relatedId": 1,
+      "relatedType": "USER",
+      ...
+    }
+  ]
+}
+```
+
+**시나리오 4: 제재 부여 → 자동 알림**
+
+```bash
+# 관리자가 제재 부여 (UserPenaltyCreatedEvent 발행)
+curl -X POST 'http://54.180.251.210:8080/api/v1/penalties?currentUserId=1' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "targetUserId": 2,
+    "penaltyType": "POST_BAN_24H",
+    "reason": "부적절한 게시물"
+  }'
+
+# 사용자 2의 알림 확인
+curl 'http://54.180.251.210:8080/api/v1/notifications?currentUserId=2'
+
+# 응답: 제재 알림 자동 생성
+{
+  "success": true,
+  "data": [
+    {
+      "type": "PENALTY_APPLIED",
+      "title": "제재 통보",
+      "content": "커뮤니티 규칙 위반으로 글쓰기 금지 24시간 제재되었습니다",
+      "relatedId": 1,
+      "relatedType": "PENALTY",
+      ...
+    }
+  ]
+}
+```
+
+---
+
+#### 17.4 알림 설정으로 특정 알림 차단
+
+```bash
+# 좋아요 알림을 받고 싶지 않은 경우
+curl -X PUT 'http://54.180.251.210:8080/api/v1/notifications/preferences?currentUserId=1' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "notifyComment": true,
+    "notifyReply": true,
+    "notifyLike": false,
+    "notifyScrap": true,
+    "notifyReportResult": true,
+    "notifyLevelUp": true,
+    "notifyPenalty": true
+  }'
+
+# 이후 좋아요를 받아도 알림이 생성되지 않음
+curl -X POST 'http://54.180.251.210:8080/api/v1/posts/20/like?currentUserId=3'
+
+curl 'http://54.180.251.210:8080/api/v1/notifications?currentUserId=1'
+# 좋아요 알림 없음 (설정에서 OFF했기 때문)
+```
+
+---
+
+#### 17.5 Phase 3 구현 상세
+
+**이벤트 기반 아키텍처:**
+- ✅ `@TransactionalEventListener(phase = AFTER_COMMIT)` 사용
+- ✅ 트랜잭션 커밋 후 이벤트 처리로 안정성 보장
+- ✅ 자기 자신에게는 알림 발송 안 함
+
+**도메인 이벤트:**
+- ✅ `CommentCreatedEvent` - Comment 엔티티에서 발행
+- ✅ `LikeCreatedEvent` - PostLike 엔티티에서 발행
+- ✅ `ScrapCreatedEvent` - PostScrap 엔티티에서 발행
+- ✅ `UserLevelUpEvent` - UserPoint 엔티티에서 발행
+- ✅ `UserPenaltyCreatedEvent`, `UserPenaltyExpiredEvent` - Phase 1에서 이미 구현
+
+**엔티티 변경:**
+- ✅ Comment: BaseEntity → AggregateRoot
+- ✅ PostLike: BaseEntity → AggregateRoot
+- ✅ PostScrap: BaseEntity → AggregateRoot
+- ✅ UserPoint: BaseEntity → AggregateRoot
+
+**통합:**
+- ✅ Phase 1 제재 시스템과 연동 (제재 알림)
+- ✅ Phase 2 게시판 고도화와 연동 (댓글, 좋아요, 스크랩 알림)
+- ✅ 포인트/레벨 시스템과 연동 (레벨업 알림)
+- ✅ 신고 시스템과 연동 (신고 결과 알림)
+
+---
+
+## 🎉 전체 3단계 구현 완료!
+
+### ✅ Phase 1: 사용자 제재 & 패널티 시스템
+- 자동 제재 (3회 → 24시간, 5회 → 7일 금지)
+- 고위험 신고 즉시 조치
+- 제재 스케줄러 (5분마다 자동 만료)
+- 7가지 제재 타입
+
+### ✅ Phase 2: 게시판 고도화
+- 파일 첨부 (이미지 10MB, 동영상 100MB)
+- Redis 조회수 중복 방지 (IP + User, 24시간 TTL)
+- 게시글 소프트 삭제 & 관리자 복구
+
+### ✅ Phase 3: 알림 시스템
+- 이벤트 기반 자동 알림 발송
+- 10가지 알림 타입
+- 사용자별 알림 설정
+- 읽음/미읽음 상태 관리
+
+**완벽한 통합:**
+모든 기능이 도메인 이벤트를 통해 연결되어 있으며, 사용자 행동에 따라 자동으로 알림이 발송됩니다!
+

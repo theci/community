@@ -21,6 +21,11 @@ import java.util.UUID;
  */
 @Slf4j
 @Service
+@org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(
+    name = "community.file.storage.enabled",
+    havingValue = "true",
+    matchIfMissing = true
+)
 public class FileStorageService {
 
     private final String uploadBasePath;
@@ -39,9 +44,12 @@ public class FileStorageService {
             if (!Files.exists(uploadPath)) {
                 Files.createDirectories(uploadPath);
                 log.info("파일 저장소 디렉토리 생성: {}", uploadBasePath);
+            } else {
+                log.info("파일 저장소 디렉토리 존재 확인: {}", uploadBasePath);
             }
         } catch (IOException e) {
-            throw new RuntimeException("파일 저장소 초기화 실패", e);
+            // 초기화 실패 시 경고만 로깅 (파일 저장 시 재시도)
+            log.warn("파일 저장소 초기화 실패 (파일 업로드 시 재생성됩니다): {}", uploadBasePath, e);
         }
     }
 

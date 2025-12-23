@@ -2,6 +2,7 @@ package com.community.platform.user.application;
 
 import com.community.platform.user.domain.*;
 import com.community.platform.engagement.application.ScrapFolderService;
+import com.community.platform.notification.application.NotificationPreferenceService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -18,24 +19,28 @@ import org.springframework.transaction.event.TransactionalEventListener;
 public class UserEventHandler {
 
     private final ScrapFolderService scrapFolderService;
+    private final NotificationPreferenceService notificationPreferenceService;
 
     /**
      * 사용자 회원가입 완료 이벤트 처리
      * - 기본 스크랩 폴더 생성
-     * - 웰컴 알림 전송 (향후 구현)
+     * - 알림 설정 초기화
      */
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handleUserRegistered(UserRegisteredEvent event) {
-        log.info("사용자 회원가입 이벤트 처리 시작. userId: {}, email: {}", 
+        log.info("사용자 회원가입 이벤트 처리 시작. userId: {}, email: {}",
                 event.getUserId(), event.getEmail());
-        
+
         try {
             // 기본 스크랩 폴더 생성
             scrapFolderService.createDefaultFolder(event.getUserId());
-            
+
+            // 알림 설정 초기화 (모든 알림 활성화)
+            notificationPreferenceService.createDefaultPreference(event.getUserId());
+
             log.info("사용자 회원가입 후속 처리 완료. userId: {}", event.getUserId());
         } catch (Exception e) {
-            log.error("사용자 회원가입 후속 처리 실패. userId: {}, error: {}", 
+            log.error("사용자 회원가입 후속 처리 실패. userId: {}, error: {}",
                     event.getUserId(), e.getMessage(), e);
             // 비즈니스 로직에 영향을 주지 않도록 예외를 삼킴
         }

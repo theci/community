@@ -3,7 +3,7 @@ package com.community.platform.content.presentation.web;
 import com.community.platform.content.application.PostAttachmentService;
 import com.community.platform.content.domain.PostAttachment;
 import com.community.platform.content.dto.AttachmentResponse;
-import com.community.platform.shared.presentation.ApiResponse;
+import com.community.platform.shared.dto.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;

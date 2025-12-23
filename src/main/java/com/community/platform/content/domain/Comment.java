@@ -1,6 +1,6 @@
 package com.community.platform.content.domain;
 
-import com.community.platform.shared.domain.BaseEntity;
+import com.community.platform.shared.domain.AggregateRoot;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -17,7 +17,7 @@ import java.util.List;
        })
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class Comment extends BaseEntity {
+public class Comment extends AggregateRoot {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "post_id", nullable = false)
@@ -54,23 +54,47 @@ public class Comment extends BaseEntity {
         this.content = content;
         this.status = CommentStatus.ACTIVE;
         this.depth = calculateDepth(parentComment);
-        
+
         if (parentComment != null) {
             parentComment.childComments.add(this);
         }
-        
+
         post.increaseCommentCount();
     }
 
     public static Comment create(Post post, Long authorId, String content) {
         validateContent(content);
-        return new Comment(post, null, authorId, content);
+        Comment comment = new Comment(post, null, authorId, content);
+
+        // 댓글 생성 이벤트 발행 (알림용)
+        comment.addDomainEvent(new CommentCreatedEvent(
+                comment.getId(),
+                post.getId(),
+                post.getAuthorId(),
+                authorId,
+                null,  // 부모 댓글 없음
+                null   // 부모 댓글 작성자 없음
+        ));
+
+        return comment;
     }
 
     public static Comment createReply(Post post, Comment parentComment, Long authorId, String content) {
         validateContent(content);
         validateReplyDepth(parentComment);
-        return new Comment(post, parentComment, authorId, content);
+        Comment comment = new Comment(post, parentComment, authorId, content);
+
+        // 대댓글 생성 이벤트 발행 (알림용)
+        comment.addDomainEvent(new CommentCreatedEvent(
+                comment.getId(),
+                post.getId(),
+                post.getAuthorId(),
+                authorId,
+                parentComment.getId(),
+                parentComment.getAuthorId()
+        ));
+
+        return comment;
     }
 
     public void updateContent(String content) {

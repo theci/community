@@ -1,6 +1,6 @@
 package com.community.platform.engagement.domain;
 
-import com.community.platform.shared.domain.BaseEntity;
+import com.community.platform.shared.domain.AggregateRoot;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -14,7 +14,7 @@ import lombok.NoArgsConstructor;
        })
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class PostScrap extends BaseEntity {
+public class PostScrap extends AggregateRoot {
 
     @Column(name = "post_id", nullable = false)
     private Long postId;
@@ -32,6 +32,21 @@ public class PostScrap extends BaseEntity {
         this.scrapFolder = scrapFolder;
     }
 
+    public static PostScrap create(Long postId, Long userId, ScrapFolder scrapFolder, Long postAuthorId) {
+        PostScrap scrap = new PostScrap(postId, userId, scrapFolder);
+
+        // 스크랩 생성 이벤트 발행 (알림용)
+        scrap.addDomainEvent(new ScrapCreatedEvent(
+                scrap.getId(),
+                postId,
+                postAuthorId,
+                userId
+        ));
+
+        return scrap;
+    }
+
+    // 하위 호환성을 위한 오버로드 메서드 (기존 코드 호환)
     public static PostScrap create(Long postId, Long userId, ScrapFolder scrapFolder) {
         return new PostScrap(postId, userId, scrapFolder);
     }

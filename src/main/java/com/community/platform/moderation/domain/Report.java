@@ -127,8 +127,8 @@ public class Report extends AggregateRoot {
         this.reviewedAt = LocalDateTime.now();
 
         addDomainEvent(new ReportApprovedEvent(
-            this.getId(), reviewerId, this.targetType, this.targetId,
-            this.reportedUserId, this.reason, actionTaken
+            this.getId(), this.reporterId, reviewerId, this.targetType,
+            this.targetId, this.reportedUserId, this.reason, actionTaken
         ));
     }
 
@@ -149,7 +149,7 @@ public class Report extends AggregateRoot {
         this.reviewComment = reviewComment;
         this.reviewedAt = LocalDateTime.now();
 
-        addDomainEvent(new ReportRejectedEvent(this.getId(), reviewerId, reviewComment));
+        addDomainEvent(new ReportRejectedEvent(this.getId(), this.reporterId, reviewerId, reviewComment));
     }
 
     /**

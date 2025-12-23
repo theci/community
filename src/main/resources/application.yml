@@ -84,7 +84,9 @@ management:
 # 커뮤니티 플랫폼 커스텀 설정
 community:
   file:
-    upload-dir: /uploads/posts
+    storage:
+      enabled: false  # 파일 저장 기능 임시 비활성화
+    upload-dir: /app/uploads/posts
     allowed-image-types: jpg,jpeg,png,gif,webp
     allowed-video-types: mp4,avi,mov,wmv
     max-image-size: 10485760  # 10MB

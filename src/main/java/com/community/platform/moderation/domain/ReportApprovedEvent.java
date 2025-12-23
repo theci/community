@@ -12,6 +12,7 @@ import java.time.LocalDateTime;
 @Getter
 public class ReportApprovedEvent implements DomainEvent {
     private final Long reportId;
+    private final Long reporterId;  // 신고자 ID
     private final Long reviewerId;
     private final ReportTargetType targetType;
     private final Long targetId;
@@ -20,10 +21,11 @@ public class ReportApprovedEvent implements DomainEvent {
     private final String actionTaken;
     private final LocalDateTime occurredOn;
 
-    public ReportApprovedEvent(Long reportId, Long reviewerId, ReportTargetType targetType,
-                              Long targetId, Long reportedUserId, ReportReason reason,
-                              String actionTaken) {
+    public ReportApprovedEvent(Long reportId, Long reporterId, Long reviewerId,
+                              ReportTargetType targetType, Long targetId,
+                              Long reportedUserId, ReportReason reason, String actionTaken) {
         this.reportId = reportId;
+        this.reporterId = reporterId;
         this.reviewerId = reviewerId;
         this.targetType = targetType;
         this.targetId = targetId;

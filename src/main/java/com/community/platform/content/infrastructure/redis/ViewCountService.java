@@ -35,10 +35,10 @@ public class ViewCountService {
             String key = VIEW_KEY_PREFIX + postId;
             String identifier = buildIdentifier(userId, ip);
 
-            // Redis Set에 추가 시도 (중복이면 false 반환)
-            Boolean added = redisTemplate.opsForSet().add(key, identifier);
+            // Redis Set에 추가 시도 (중복이면 0 반환, 추가되면 1 반환)
+            Long added = redisTemplate.opsForSet().add(key, identifier);
 
-            if (Boolean.TRUE.equals(added)) {
+            if (added != null && added > 0) {
                 // 처음 조회한 경우 - DB 조회수 증가
                 postRepository.incrementViewCount(postId);
 

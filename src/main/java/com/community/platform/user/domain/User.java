@@ -54,14 +54,19 @@ public class User extends AggregateRoot {
         this.password = password;
         this.nickname = nickname;
         this.status = UserStatus.ACTIVE;
-        
-        addDomainEvent(new UserRegisteredEvent(this.getId(), email, nickname));
     }
 
     public static User register(String email, String encryptedPassword, String nickname) {
         validateEmail(email);
         validateNickname(nickname);
         return new User(email, encryptedPassword, nickname);
+    }
+
+    /**
+     * 회원가입 완료 이벤트 발행 (저장 후 ID가 생성된 뒤 호출)
+     */
+    public void publishRegisteredEvent() {
+        addDomainEvent(new UserRegisteredEvent(this.getId(), this.email, this.nickname));
     }
 
     public void updateLastLoginAt() {
