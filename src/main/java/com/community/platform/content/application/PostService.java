@@ -4,6 +4,8 @@ import com.community.platform.content.domain.*;
 import com.community.platform.content.exception.CategoryNotFoundException;
 import com.community.platform.content.exception.PostNotFoundException;
 import com.community.platform.content.infrastructure.persistence.*;
+import com.community.platform.moderation.application.UserPenaltyService;
+import com.community.platform.moderation.exception.UserPenaltyException;
 import com.community.platform.user.exception.UserNotFoundException;
 import com.community.platform.user.infrastructure.persistence.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -31,31 +33,38 @@ public class PostService {
     private final TagRepository tagRepository;
     private final PostTagRepository postTagRepository;
     private final UserRepository userRepository;
+    private final UserPenaltyService penaltyService;
 
     /**
      * 새 게시글 작성 (임시저장 상태로 생성)
      */
     @Transactional
-    public Post createPost(Long authorId, Long categoryId, String title, String content, 
+    public Post createPost(Long authorId, Long categoryId, String title, String content,
                           ContentType contentType, List<String> tagNames) {
         log.info("게시글 작성 시작. authorId: {}, title: {}", authorId, title);
-        
+
         // 작성자 존재 확인
         validateUserExists(authorId);
-        
+
+        // 제재 체크 추가
+        if (penaltyService.hasPostBan(authorId)) {
+            log.warn("글쓰기 제재 중인 사용자의 게시글 작성 시도. userId: {}", authorId);
+            throw new UserPenaltyException("글쓰기 제재 중입니다. 게시글을 작성할 수 없습니다.");
+        }
+
         // 카테고리 조회
         Category category = categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new CategoryNotFoundException(categoryId));
-        
+
         // 게시글 생성
         Post post = Post.create(authorId, category, title, content, contentType);
         Post savedPost = postRepository.save(post);
-        
+
         // 태그 처리 및 연결
         if (tagNames != null && !tagNames.isEmpty()) {
             attachTagsToPost(savedPost, tagNames);
         }
-        
+
         log.info("게시글 작성 완료. postId: {}", savedPost.getId());
         return savedPost;
     }

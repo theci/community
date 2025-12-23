@@ -5,6 +5,8 @@ import com.community.platform.content.exception.CommentNotFoundException;
 import com.community.platform.content.exception.PostNotFoundException;
 import com.community.platform.content.infrastructure.persistence.CommentRepository;
 import com.community.platform.content.infrastructure.persistence.PostRepository;
+import com.community.platform.moderation.application.UserPenaltyService;
+import com.community.platform.moderation.exception.UserPenaltyException;
 import com.community.platform.user.exception.UserNotFoundException;
 import com.community.platform.user.infrastructure.persistence.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -29,6 +31,7 @@ public class CommentService {
     private final CommentRepository commentRepository;
     private final PostRepository postRepository;
     private final UserRepository userRepository;
+    private final UserPenaltyService penaltyService;
 
     /**
      * 새 댓글 작성
@@ -36,17 +39,23 @@ public class CommentService {
     @Transactional
     public Comment createComment(Long postId, Long authorId, String content) {
         log.info("댓글 작성 시작. postId: {}, authorId: {}", postId, authorId);
-        
+
         // 게시글 존재 확인
         Post post = getPostById(postId);
-        
+
         // 작성자 존재 확인
         validateUserExists(authorId);
-        
+
+        // 제재 체크 추가
+        if (penaltyService.hasCommentBan(authorId)) {
+            log.warn("댓글 제재 중인 사용자의 댓글 작성 시도. userId: {}", authorId);
+            throw new UserPenaltyException("댓글 작성 제재 중입니다. 댓글을 작성할 수 없습니다.");
+        }
+
         // 댓글 생성
         Comment comment = Comment.create(post, authorId, content);
         Comment savedComment = commentRepository.save(comment);
-        
+
         log.info("댓글 작성 완료. commentId: {}", savedComment.getId());
         return savedComment;
     }
@@ -56,22 +65,28 @@ public class CommentService {
      */
     @Transactional
     public Comment createReply(Long postId, Long parentCommentId, Long authorId, String content) {
-        log.info("대댓글 작성 시작. postId: {}, parentCommentId: {}, authorId: {}", 
+        log.info("대댓글 작성 시작. postId: {}, parentCommentId: {}, authorId: {}",
                 postId, parentCommentId, authorId);
-        
+
         // 게시글 존재 확인
         Post post = getPostById(postId);
-        
+
         // 부모 댓글 존재 확인
         Comment parentComment = getCommentById(parentCommentId);
-        
+
         // 작성자 존재 확인
         validateUserExists(authorId);
-        
+
+        // 제재 체크 추가
+        if (penaltyService.hasCommentBan(authorId)) {
+            log.warn("댓글 제재 중인 사용자의 대댓글 작성 시도. userId: {}", authorId);
+            throw new UserPenaltyException("댓글 작성 제재 중입니다. 대댓글을 작성할 수 없습니다.");
+        }
+
         // 대댓글 생성
         Comment reply = Comment.createReply(post, parentComment, authorId, content);
         Comment savedReply = commentRepository.save(reply);
-        
+
         log.info("대댓글 작성 완료. replyId: {}", savedReply.getId());
         return savedReply;
     }

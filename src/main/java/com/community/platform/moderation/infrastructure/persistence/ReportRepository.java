@@ -101,4 +101,13 @@ public interface ReportRepository extends JpaRepository<Report, Long> {
            "AND r.reason IN ('SEXUAL', 'VIOLENCE', 'HATE_SPEECH', 'ILLEGAL_CONTENT', 'PERSONAL_INFO') " +
            "ORDER BY r.createdAt ASC")
     Page<Report> findHighSeverityReports(Pageable pageable);
+
+    /**
+     * 특정 사용자에 대한 승인된 신고 수 조회 (기간 내)
+     * 자동 제재 로직에서 사용
+     */
+    @Query("SELECT COUNT(r) FROM Report r WHERE r.reportedUserId = :userId " +
+           "AND r.status = 'APPROVED' AND r.reviewedAt > :since")
+    Long countApprovedReportsByUser(@Param("userId") Long userId,
+                                    @Param("since") LocalDateTime since);
 }

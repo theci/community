@@ -185,6 +185,15 @@
 - **GET** `/api/v1/reports/statistics/count?startDate={date}&endDate={date}` - 기간별 신고 수 (관리자 전용)
 - **GET** `/api/v1/reports/statistics/target/{targetType}/{targetId}/count` - 대상별 신고 수 조회
 
+#### 🔨 **사용자 제재 API** (PenaltyController, UserPenaltyService) ✨ NEW!
+- **POST** `/api/v1/penalties?currentUserId={adminId}` - 수동 제재 부여 (관리자 전용)
+- **GET** `/api/v1/penalties/user/{userId}` - 사용자 제재 이력 조회
+- **GET** `/api/v1/penalties/user/{userId}/active` - 사용자 활성 제재 조회
+- **GET** `/api/v1/penalties/active` - 모든 활성 제재 목록 (관리자 전용)
+- **DELETE** `/api/v1/penalties/{penaltyId}?currentUserId={adminId}` - 제재 해제 (관리자 전용)
+- **GET** `/api/v1/penalties/users/{userId}/can-post` - 글쓰기 가능 여부 확인
+- **GET** `/api/v1/penalties/users/{userId}/can-comment` - 댓글 작성 가능 여부 확인
+
 #### 💊 **Health Check**
 - **GET** `/actuator/health` - 서버 상태 확인
 - **GET** `/h2-console` - H2 데이터베이스 콘솔
@@ -1133,6 +1142,177 @@ curl "http://54.180.251.210:8080/api/v1/reports/type/POST?page=0&size=20" \
 - **CHAT**: 채팅 (미구현)
 - **USER**: 사용자
 
+### 15. 사용자 제재 시스템 테스트 (제재 & 패널티) ✨ NEW!
+
+**제재 타입 (PenaltyType):**
+- **POST_BAN_24H**: 글쓰기 금지 24시간
+- **POST_BAN_7D**: 글쓰기 금지 7일
+- **POST_BAN_PERMANENT**: 글쓰기 영구 금지
+- **COMMENT_BAN_24H**: 댓글 금지 24시간
+- **COMMENT_BAN_7D**: 댓글 금지 7일
+- **COMMENT_BAN_PERMANENT**: 댓글 영구 금지
+- **FULL_BAN**: 계정 정지
+
+**수동 제재 부여 (관리자 전용)**
+```bash
+# 1. 관리자 로그인하여 토큰 받기
+TOKEN=$(curl -s -X POST http://54.180.251.210:8080/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"admin@example.com","password":"Password123@"}' \
+  | grep -o '"accessToken":"[^"]*' | cut -d'"' -f4)
+
+# 2. 24시간 글쓰기 금지 제재 부여
+curl -X POST "http://54.180.251.210:8080/api/v1/penalties?currentUserId=1" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{
+    "targetUserId": 2,
+    "penaltyType": "POST_BAN_24H",
+    "reason": "스팸 게시글 작성"
+  }'
+
+# 3. 7일 댓글 금지 제재 부여
+curl -X POST "http://54.180.251.210:8080/api/v1/penalties?currentUserId=1" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{
+    "targetUserId": 3,
+    "penaltyType": "COMMENT_BAN_7D",
+    "reason": "악성 댓글 반복"
+  }'
+
+# 4. 계정 정지 (영구)
+curl -X POST "http://54.180.251.210:8080/api/v1/penalties?currentUserId=1" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{
+    "targetUserId": 4,
+    "penaltyType": "FULL_BAN",
+    "reason": "고위험 신고 승인 - 음란물"
+  }'
+```
+
+**응답 예시 (제재 부여):**
+```json
+{
+  "success": true,
+  "data": {
+    "id": 1,
+    "userId": 2,
+    "penaltyType": "POST_BAN_24H",
+    "penaltyTypeName": "글쓰기 금지 24시간",
+    "reason": "스팸 게시글 작성",
+    "startDate": "2025-12-23T10:00:00",
+    "endDate": "2025-12-24T10:00:00",
+    "isActive": true,
+    "isPermanent": false,
+    "remainingMillis": 86400000,
+    "createdBy": 1,
+    "createdAt": "2025-12-23T10:00:00"
+  },
+  "message": "제재가 부여되었습니다",
+  "timestamp": "2025-12-23T10:00:00"
+}
+```
+
+**제재 조회 및 관리**
+```bash
+# 사용자의 활성 제재 조회
+curl "http://54.180.251.210:8080/api/v1/penalties/user/2/active" \
+  -H "Authorization: Bearer $TOKEN"
+
+# 사용자의 모든 제재 이력 조회
+curl "http://54.180.251.210:8080/api/v1/penalties/user/2?page=0&size=20" \
+  -H "Authorization: Bearer $TOKEN"
+
+# 모든 활성 제재 목록 조회 (관리자)
+curl "http://54.180.251.210:8080/api/v1/penalties/active?page=0&size=20" \
+  -H "Authorization: Bearer $TOKEN"
+
+# 제재 해제
+curl -X DELETE "http://54.180.251.210:8080/api/v1/penalties/1?currentUserId=1" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+**제재 확인 API**
+```bash
+# 글쓰기 가능 여부 확인
+curl "http://54.180.251.210:8080/api/v1/penalties/users/2/can-post"
+
+# 댓글 작성 가능 여부 확인
+curl "http://54.180.251.210:8080/api/v1/penalties/users/2/can-comment"
+```
+
+**응답 예시 (제재 확인):**
+```json
+{
+  "success": true,
+  "data": {
+    "userId": 2,
+    "canPost": false,
+    "canComment": true,
+    "message": "제재 중입니다"
+  }
+}
+```
+
+**제재 중 글쓰기 시도 시 에러:**
+```bash
+# 제재 중인 사용자가 게시글 작성 시도
+curl -X POST "http://54.180.251.210:8080/api/v1/posts?currentUserId=2" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{
+    "categoryId": 1,
+    "title": "테스트",
+    "content": "테스트 내용",
+    "contentType": "MARKDOWN"
+  }'
+
+# 에러 응답
+{
+  "success": false,
+  "message": "글쓰기 제재 중입니다. 게시글을 작성할 수 없습니다.",
+  "errorCode": "USER_PENALTY_ERROR",
+  "timestamp": "2025-12-23T10:05:00"
+}
+```
+
+**자동 제재 시나리오:**
+```bash
+# 시나리오: 신고 3회 승인 → 자동 24시간 글쓰기 금지
+# 1. 사용자에 대한 신고 승인 (1회)
+curl -X POST "http://54.180.251.210:8080/api/v1/reports/1/approve?currentUserId=1" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{
+    "reviewComment": "스팸 게시글 확인",
+    "actionTaken": "게시글 삭제"
+  }'
+
+# 2. 동일 사용자에 대한 신고 승인 (2회)
+curl -X POST "http://54.180.251.210:8080/api/v1/reports/2/approve?currentUserId=1" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{
+    "reviewComment": "스팸 게시글 확인",
+    "actionTaken": "게시글 삭제"
+  }'
+
+# 3. 동일 사용자에 대한 신고 승인 (3회) → 자동 24시간 제재
+curl -X POST "http://54.180.251.210:8080/api/v1/reports/3/approve?currentUserId=1" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{
+    "reviewComment": "스팸 게시글 확인",
+    "actionTaken": "게시글 삭제"
+  }'
+
+# 4. 활성 제재 확인 → POST_BAN_24H 제재가 자동 부여됨
+curl "http://54.180.251.210:8080/api/v1/penalties/user/2/active" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
 ---
 
 ## 📝 개발 참고사항
@@ -1190,40 +1370,27 @@ com.community.platform
 
 ---
 
-## 🎯 빠른 복구 로드맵
+## 🎯 로드맵
 
-### ✅ Phase 1: 기본 API 복구 (완료 - 2025-12-21)
-1. ✅ Exception 클래스 import 문제 해결
-2. ✅ UserService 복구 → AuthController, UserController 활성화
-3. ✅ 회원가입/로그인 테스트 가능
+### ✅ Phase 1: 기본 API (완료 - 2025-12-21)
+1. ✅ 회원가입/로그인 테스트 가능
 
 ### ✅ Phase 2: 핵심 기능 복구 (완료 - 2025-12-22)
-1. ✅ PostService 복구 (Exception import 수정)
-2. ✅ PostRepositoryImpl 복구 (QueryDSL Tuple 변환)
-3. ✅ PostRepository에 PostRepositoryCustom 재연결
-4. ✅ PostController 활성화
-5. ✅ 게시글 CRUD, 검색, 인기글 테스트 가능
+1. ✅ 게시글 CRUD, 검색, 인기글 테스트 가능
 
 ### ✅ Phase 3: 댓글 기능 복구 (완료 - 2025-12-22)
-1. ✅ CommentService 복구 (Exception import 추가, 중복 클래스 제거)
-2. ✅ CommentController 활성화
-3. ✅ 댓글/대댓글 CRUD API 사용 가능
-4. ✅ 계층형 댓글 구조 지원
-5. ✅ Redis 연동 완료 (AWS ElastiCache)
+1. ✅ 댓글/대댓글 CRUD API 사용 가능
+2. ✅ 계층형 댓글 구조 지원
+3. ✅ Redis 연동 완료 (AWS ElastiCache)
 
 ### ✅ Phase 4: 좋아요 기능 복구 (완료 - 2025-12-22)
-1. ✅ PostLikeService 복구 (LikeResult 클래스 추가, 메서드 보완)
-2. ✅ PostLikeController 활성화
-3. ✅ 좋아요 토글, 상태 확인, 목록 조회 API 사용 가능
-4. ✅ 게시글 좋아요 수 자동 업데이트
-5. ✅ 좋아요한 사용자/게시글 목록 조회 기능
+1. ✅ 좋아요 토글, 상태 확인, 목록 조회 API 사용 가능
+2. ✅ 게시글 좋아요 수 자동 업데이트
+3. ✅ 좋아요한 사용자/게시글 목록 조회 기능
 
 ### ✅ Phase 5: 스크랩 기능 복구 (완료 - 2025-12-22)
-1. ✅ PostScrapService 및 ScrapFolderService 복구
-2. ✅ PostScrapController 활성화 (DTO 호환성 수정)
-3. ✅ ScrapFolderController 활성화 (래퍼 메서드 추가)
-4. ✅ 스크랩 추가/취소, 폴더 관리 API 사용 가능
-5. ✅ 스크랩 검색, 폴더 이동, 통계 조회 기능
+1. ✅ 스크랩 추가/취소, 폴더 관리 API 사용 가능
+2. ✅ 스크랩 검색, 폴더 이동, 통계 조회 기능
 
 ### ✅ Phase 6-1: 보상 시스템 - 포인트 & 레벨 (완료 - 2025-12-22)
 1. ✅ 도메인 모델 설계 (UserPoint, UserLevel, PointTransaction)
