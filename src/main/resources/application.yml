@@ -50,13 +50,23 @@ spring:
     type: redis
     redis:
       time-to-live: 3600s
-      
+
+  cloud:
+    aws:
+      s3:
+        bucket: test-airgateway
+        region: ap-northeast-2
+      credentials:
+        instance-profile: true  # EC2 인스턴스 프로파일 사용
+      region:
+        static: ap-northeast-2
+
 # JWT 설정
 jwt:
   secret: mySecretKeyForJWTTokenGenerationThatIsLongEnoughForHS512AlgorithmSecurity
   access-token-validity-in-seconds: 3600      # 1시간
   refresh-token-validity-in-seconds: 1209600  # 14일
-      
+
 server:
   port: 8080
   servlet:
@@ -65,7 +75,7 @@ server:
       charset: UTF-8
       enabled: true
       force: true
-      
+
 logging:
   level:
     com.community.platform: DEBUG
@@ -85,8 +95,12 @@ management:
 community:
   file:
     storage:
-      enabled: false  # 파일 저장 기능 임시 비활성화
-    upload-dir: /app/uploads/posts
+      type: s3  # s3 또는 local
+      enabled: true
+    s3:
+      bucket: test-airgateway
+      prefix: posts/attachments  # S3 저장 경로 prefix
+    upload-dir: /app/uploads/posts  # local 저장 시 사용
     allowed-image-types: jpg,jpeg,png,gif,webp
     allowed-video-types: mp4,avi,mov,wmv
     max-image-size: 10485760  # 10MB
@@ -167,7 +181,17 @@ spring:
 
   cache:
     type: redis  # Redis 연결 문제로 임시 비활성화
-        
+
+  cloud:
+    aws:
+      s3:
+        bucket: test-airgateway
+        region: ap-northeast-2
+      credentials:
+        instance-profile: true
+      region:
+        static: ap-northeast-2
+
 # Docker 환경용 JWT 설정
 jwt:
   secret: ${JWT_SECRET:mySecretKeyForJWTTokenGenerationThatIsLongEnoughForHS512AlgorithmSecurity}
@@ -177,8 +201,8 @@ jwt:
 server:
   port: 8080
   servlet:
-    context-path: 
-    
+    context-path:
+
 logging:
   level:
     com.community.platform: DEBUG

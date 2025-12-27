@@ -22,9 +22,8 @@ import java.util.UUID;
 @Slf4j
 @Service
 @org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(
-    name = "community.file.storage.enabled",
-    havingValue = "true",
-    matchIfMissing = true
+    name = "community.file.storage.type",
+    havingValue = "local"
 )
 public class FileStorageService {
 

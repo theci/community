@@ -7,8 +7,9 @@ import com.community.platform.content.exception.PostNotFoundException;
 import com.community.platform.content.infrastructure.persistence.PostAttachmentRepository;
 import com.community.platform.content.infrastructure.persistence.PostRepository;
 import com.community.platform.content.infrastructure.storage.FileStorageService;
-import lombok.RequiredArgsConstructor;
+import com.community.platform.content.infrastructure.storage.S3FileStorageService;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -26,15 +27,21 @@ public class PostAttachmentService {
     private final PostAttachmentRepository attachmentRepository;
     private final PostRepository postRepository;
     private final FileStorageService fileStorageService;
+    private final S3FileStorageService s3FileStorageService;
 
     public PostAttachmentService(
             PostAttachmentRepository attachmentRepository,
             PostRepository postRepository,
-            @org.springframework.beans.factory.annotation.Autowired(required = false)
-            FileStorageService fileStorageService) {
+            @Autowired(required = false) FileStorageService fileStorageService,
+            @Autowired(required = false) S3FileStorageService s3FileStorageService) {
         this.attachmentRepository = attachmentRepository;
         this.postRepository = postRepository;
         this.fileStorageService = fileStorageService;
+        this.s3FileStorageService = s3FileStorageService;
+
+        if (fileStorageService == null && s3FileStorageService == null) {
+            throw new IllegalStateException("파일 저장 서비스가 설정되지 않았습니다");
+        }
     }
 
     /**
@@ -42,10 +49,6 @@ public class PostAttachmentService {
      */
     @Transactional
     public List<PostAttachment> uploadAttachments(Long postId, List<MultipartFile> files) {
-        if (fileStorageService == null) {
-            throw new UnsupportedOperationException("파일 저장 기능이 비활성화되어 있습니다");
-        }
-
         // 게시글 존재 확인
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new PostNotFoundException(postId));
@@ -62,13 +65,21 @@ public class PostAttachmentService {
             String extension = extractExtension(file.getOriginalFilename());
             AttachmentType fileType = AttachmentType.fromExtension(extension);
 
-            // 파일 저장
-            String filePath = fileStorageService.saveFile(file, fileType);
+            // 파일 저장 (S3 또는 로컬)
+            String filePath;
+            String storedFileName;
+            if (s3FileStorageService != null) {
+                filePath = s3FileStorageService.saveFile(file, fileType);
+                storedFileName = s3FileStorageService.generateUniqueFileName(file.getOriginalFilename());
+            } else {
+                filePath = fileStorageService.saveFile(file, fileType);
+                storedFileName = fileStorageService.generateUniqueFileName(file.getOriginalFilename());
+            }
 
             // 엔티티 생성
             PostAttachment attachment = PostAttachment.create(
                     postId,
-                    fileStorageService.generateUniqueFileName(file.getOriginalFilename()),
+                    storedFileName,
                     file.getOriginalFilename(),
                     fileType,
                     filePath,
@@ -79,7 +90,9 @@ public class PostAttachmentService {
 
             attachments.add(attachmentRepository.save(attachment));
 
-            log.info("첨부파일 업로드 완료. postId: {}, fileName: {}", postId, file.getOriginalFilename());
+            log.info("첨부파일 업로드 완료. postId: {}, fileName: {}, storage: {}",
+                    postId, file.getOriginalFilename(),
+                    s3FileStorageService != null ? "S3" : "LOCAL");
         }
 
         return attachments;
@@ -102,12 +115,14 @@ public class PostAttachmentService {
         }
 
         // 파일 시스템에서 삭제
-        if (fileStorageService != null) {
-            try {
+        try {
+            if (s3FileStorageService != null) {
+                s3FileStorageService.deleteFile(attachment.getFilePath());
+            } else if (fileStorageService != null) {
                 fileStorageService.deleteFile(attachment.getFilePath());
-            } catch (Exception e) {
-                log.error("파일 시스템 삭제 실패: {}", attachment.getFilePath(), e);
             }
+        } catch (Exception e) {
+            log.error("파일 삭제 실패: {}", attachment.getFilePath(), e);
         }
 
         // DB에서 삭제
@@ -131,13 +146,15 @@ public class PostAttachmentService {
     public void deleteAllAttachmentsByPost(Long postId) {
         List<PostAttachment> attachments = attachmentRepository.findByPostIdOrderByDisplayOrder(postId);
 
-        if (fileStorageService != null) {
-            for (PostAttachment attachment : attachments) {
-                try {
+        for (PostAttachment attachment : attachments) {
+            try {
+                if (s3FileStorageService != null) {
+                    s3FileStorageService.deleteFile(attachment.getFilePath());
+                } else if (fileStorageService != null) {
                     fileStorageService.deleteFile(attachment.getFilePath());
-                } catch (Exception e) {
-                    log.error("파일 시스템 삭제 실패: {}", attachment.getFilePath(), e);
                 }
+            } catch (Exception e) {
+                log.error("파일 삭제 실패: {}", attachment.getFilePath(), e);
             }
         }
 

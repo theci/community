@@ -1524,6 +1524,15 @@ com.community.platform
 
 #### 16.1 파일 첨부 기능
 
+**파일 저장 방식:**
+- ✅ **AWS S3 저장** (현재 설정)
+  - 버킷: `test-airgateway`
+  - 저장 경로: `posts/attachments/{날짜}/{UUID}.{확장자}`
+  - 예시: `posts/attachments/2025/12/23/a1b2c3d4-e5f6-7890-abcd-ef1234567890.jpg`
+  - EC2 IAM Role 기반 인증
+- 📁 로컬 파일 시스템 저장 (비활성화)
+  - `community.file.storage.type=local`로 변경 시 사용 가능
+
 **지원 파일 타입:**
 - **이미지 (IMAGE)**: jpg, jpeg, png, gif, webp (최대 10MB)
 - **동영상 (VIDEO)**: mp4, avi, mov, wmv (최대 100MB)
@@ -1531,7 +1540,7 @@ com.community.platform
 **파일 첨부 업로드 (POST /api/v1/posts/{postId}/attachments)**
 
 ```bash
-# 게시글에 이미지 파일 첨부
+# 게시글에 이미지 파일 첨부 (S3에 저장됨)
 curl -X POST 'http://54.180.251.210:8080/api/v1/posts/1/attachments?currentUserId=1' \
   -F 'files=@/path/to/image1.jpg' \
   -F 'files=@/path/to/image2.png'
@@ -1546,8 +1555,8 @@ curl -X POST 'http://54.180.251.210:8080/api/v1/posts/1/attachments?currentUserI
       "fileName": "a1b2c3d4-e5f6-7890-abcd-ef1234567890.jpg",
       "originalName": "image1.jpg",
       "fileType": "IMAGE",
-      "filePath": "2025/01/15/a1b2c3d4-e5f6-7890-abcd-ef1234567890.jpg",
-      "fileUrl": "/api/v1/files/2025/01/15/a1b2c3d4-e5f6-7890-abcd-ef1234567890.jpg",
+      "filePath": "posts/attachments/2025/12/23/a1b2c3d4-e5f6-7890-abcd-ef1234567890.jpg",  // S3 객체 키
+      "fileUrl": "https://test-airgateway.s3.ap-northeast-2.amazonaws.com/posts/attachments/2025/12/23/a1b2c3d4-e5f6-7890-abcd-ef1234567890.jpg",  // S3 URL
       "fileSize": 2048576,
       "mimeType": "image/jpeg",
       "displayOrder": 0
@@ -1558,8 +1567,8 @@ curl -X POST 'http://54.180.251.210:8080/api/v1/posts/1/attachments?currentUserI
       "fileName": "b2c3d4e5-f6g7-8901-bcde-fg2345678901.png",
       "originalName": "image2.png",
       "fileType": "IMAGE",
-      "filePath": "2025/01/15/b2c3d4e5-f6g7-8901-bcde-fg2345678901.png",
-      "fileUrl": "/api/v1/files/2025/01/15/b2c3d4e5-f6g7-8901-bcde-fg2345678901.png",
+      "filePath": "posts/attachments/2025/12/23/b2c3d4e5-f6g7-8901-bcde-fg2345678901.png",
+      "fileUrl": "https://test-airgateway.s3.ap-northeast-2.amazonaws.com/posts/attachments/2025/12/23/b2c3d4e5-f6g7-8901-bcde-fg2345678901.png",
       "fileSize": 1536000,
       "mimeType": "image/png",
       "displayOrder": 1
@@ -1567,6 +1576,16 @@ curl -X POST 'http://54.180.251.210:8080/api/v1/posts/1/attachments?currentUserI
   ],
   "message": "파일이 업로드되었습니다"
 }
+
+# 💡 S3 저장 경로 구조
+# test-airgateway/
+# └── posts/
+#     └── attachments/
+#         └── 2025/
+#             └── 12/
+#                 └── 23/
+#                     ├── a1b2c3d4-e5f6-7890-abcd-ef1234567890.jpg
+#                     └── b2c3d4e5-f6g7-8901-bcde-fg2345678901.png
 ```
 
 **첨부파일 목록 조회 (GET /api/v1/posts/{postId}/attachments)**
@@ -1584,8 +1603,8 @@ curl 'http://54.180.251.210:8080/api/v1/posts/1/attachments'
       "fileName": "a1b2c3d4-e5f6-7890-abcd-ef1234567890.jpg",
       "originalName": "image1.jpg",
       "fileType": "IMAGE",
-      "filePath": "2025/01/15/a1b2c3d4-e5f6-7890-abcd-ef1234567890.jpg",
-      "fileUrl": "/api/v1/files/2025/01/15/a1b2c3d4-e5f6-7890-abcd-ef1234567890.jpg",
+      "filePath": "posts/attachments/2025/12/23/a1b2c3d4-e5f6-7890-abcd-ef1234567890.jpg",
+      "fileUrl": "https://test-airgateway.s3.ap-northeast-2.amazonaws.com/posts/attachments/2025/12/23/a1b2c3d4-e5f6-7890-abcd-ef1234567890.jpg",
       "fileSize": 2048576,
       "mimeType": "image/jpeg",
       "displayOrder": 0
