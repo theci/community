@@ -244,7 +244,7 @@ Bash(./gradlew clean build -x test) timeout: 3m 0s
 - **curl** 또는 **Postman** (API 테스트용)
 
 ### 서버 접속 정보
-- **외부 접속 URL**: `http://54.180.251.210:8080`
+- **외부 접속 URL**: `http://3.39.36.234:8080`
 - **로컬 접속 URL**: `http://localhost:8080`
 
 ---
@@ -268,14 +268,14 @@ docker-compose ps
 curl http://localhost:8080/actuator/health
 
 # Health Check (외부)
-curl http://54.180.251.210:8080/actuator/health
+curl http://3.39.36.234:8080/actuator/health
 
 # 응답 예시:
 # {"status":"UP","groups":["liveness","readiness"]}
 ```
 
 ### 3. H2 데이터베이스 콘솔 접속
-- **URL**: http://54.180.251.210:8080/h2-console
+- **URL**: http://3.39.36.234:8080/h2-console
 - **JDBC URL**: `jdbc:h2:mem:testdb`
 - **Username**: `sa`
 - **Password**: (비어있음)
@@ -292,7 +292,7 @@ curl http://54.180.251.210:8080/actuator/health
 - 허용 특수문자: `@ $ ! % * ? &` (주의: `#`는 사용 불가)
 
 ```bash
-curl -X POST http://54.180.251.210:8080/api/v1/users/register \
+curl -X POST http://3.39.36.234:8080/api/v1/users/register \
   -H "Content-Type: application/json" \
   -d '{
     "email": "test@example.com",
@@ -322,7 +322,7 @@ curl -X POST http://54.180.251.210:8080/api/v1/users/register \
 ### 2. 로그인 테스트
 
 ```bash
-curl -X POST http://54.180.251.210:8080/api/v1/auth/login \
+curl -X POST http://3.39.36.234:8080/api/v1/auth/login \
   -H "Content-Type: application/json" \
   -d '{
     "email": "test@example.com",
@@ -369,7 +369,7 @@ ADMIN으로 변경하려면 H2 데이터베이스 콘솔에 직접 접속해서 
 TOKEN="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
 
 # 로그아웃 (인증 필요)
-curl -X POST http://54.180.251.210:8080/api/v1/auth/logout \
+curl -X POST http://3.39.36.234:8080/api/v1/auth/logout \
   -H "Authorization: Bearer $TOKEN"
 ```
 
@@ -377,12 +377,12 @@ curl -X POST http://54.180.251.210:8080/api/v1/auth/logout \
 
 **카테고리 생성** (관리자용):
 ```bash
-curl -X POST "http://54.180.251.210:8080/api/v1/categories?name=General&description=General%20discussion%20board"
+curl -X POST "http://3.39.36.234:8080/api/v1/categories?name=General&description=General%20discussion%20board"
 ```
 
 **카테고리 트리 조회** (인증 불필요):
 ```bash
-curl http://54.180.251.210:8080/api/v1/categories/tree
+curl http://3.39.36.234:8080/api/v1/categories/tree
 ```
 
 ### 5. 게시글 작성 테스트 (인증 필요) ✨ NEW!
@@ -391,13 +391,13 @@ curl http://54.180.251.210:8080/api/v1/categories/tree
 
 ```bash
 # 1. 로그인하여 토큰 받기
-TOKEN=$(curl -s -X POST http://54.180.251.210:8080/api/v1/auth/login \
+TOKEN=$(curl -s -X POST http://3.39.36.234:8080/api/v1/auth/login \
   -H "Content-Type: application/json" \
   -d '{"email":"test@example.com","password":"Password123@"}' \
   | grep -o '"accessToken":"[^"]*' | cut -d'"' -f4)
 
 # 2. 게시글 작성 (currentUserId는 로그인한 사용자의 ID)
-curl -X POST "http://54.180.251.210:8080/api/v1/posts?currentUserId=1" \
+curl -X POST "http://3.39.36.234:8080/api/v1/posts?currentUserId=1" \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{
@@ -409,7 +409,7 @@ curl -X POST "http://54.180.251.210:8080/api/v1/posts?currentUserId=1" \
   }'
 
 # 3. 게시글 발행 (임시저장 → 발행)
-curl -X POST "http://54.180.251.210:8080/api/v1/posts/1/publish?currentUserId=1" \
+curl -X POST "http://3.39.36.234:8080/api/v1/posts/1/publish?currentUserId=1" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
@@ -444,25 +444,25 @@ curl -X POST "http://54.180.251.210:8080/api/v1/posts/1/publish?currentUserId=1"
 
 ```bash
 # 전체 게시글 목록 (페이징)
-curl "http://54.180.251.210:8080/api/v1/posts?page=0&size=20"
+curl "http://3.39.36.234:8080/api/v1/posts?page=0&size=20"
 
 # 인기 게시글 조회 (최근 7일)
-curl "http://54.180.251.210:8080/api/v1/posts/popular?days=7"
+curl "http://3.39.36.234:8080/api/v1/posts/popular?days=7"
 
 # 트렌딩 게시글 조회 (최근 24시간)
-curl "http://54.180.251.210:8080/api/v1/posts/trending?hours=24"
+curl "http://3.39.36.234:8080/api/v1/posts/trending?hours=24"
 
 # 게시글 검색
-curl "http://54.180.251.210:8080/api/v1/posts/search?keyword=테스트"
+curl "http://3.39.36.234:8080/api/v1/posts/search?keyword=테스트"
 
 # 카테고리별 게시글
-curl "http://54.180.251.210:8080/api/v1/posts/category/1"
+curl "http://3.39.36.234:8080/api/v1/posts/category/1"
 ```
 
 ### 7. 게시글 상세 조회 (인증 불필요)
 
 ```bash
-curl http://54.180.251.210:8080/api/v1/posts/1
+curl http://3.39.36.234:8080/api/v1/posts/1
 ```
 
 ### 8. 댓글 작성 및 조회 (댓글 기능) ✨ NEW!
@@ -470,13 +470,13 @@ curl http://54.180.251.210:8080/api/v1/posts/1
 **댓글 작성 (인증 필요)**
 ```bash
 # 1. 로그인하여 토큰 받기 (위 5번 참고)
-TOKEN=$(curl -s -X POST http://54.180.251.210:8080/api/v1/auth/login \
+TOKEN=$(curl -s -X POST http://3.39.36.234:8080/api/v1/auth/login \
   -H "Content-Type: application/json" \
   -d '{"email":"test@example.com","password":"Password123@"}' \
   | grep -o '"accessToken":"[^"]*' | cut -d'"' -f4)
 
 # 2. 최상위 댓글 작성
-curl -X POST "http://54.180.251.210:8080/api/v1/comments?currentUserId=1" \
+curl -X POST "http://3.39.36.234:8080/api/v1/comments?currentUserId=1" \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{
@@ -485,7 +485,7 @@ curl -X POST "http://54.180.251.210:8080/api/v1/comments?currentUserId=1" \
   }'
 
 # 3. 대댓글 작성 (parentCommentId 포함)
-curl -X POST "http://54.180.251.210:8080/api/v1/comments?currentUserId=1" \
+curl -X POST "http://3.39.36.234:8080/api/v1/comments?currentUserId=1" \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{
@@ -525,22 +525,22 @@ curl -X POST "http://54.180.251.210:8080/api/v1/comments?currentUserId=1" \
 **댓글 목록 조회 (인증 불필요)**
 ```bash
 # 게시글의 모든 댓글 조회 (계층형 구조)
-curl "http://54.180.251.210:8080/api/v1/comments/posts/1"
+curl "http://3.39.36.234:8080/api/v1/comments/posts/1"
 
 # 게시글의 최상위 댓글만 조회
-curl "http://54.180.251.210:8080/api/v1/comments/posts/1/root"
+curl "http://3.39.36.234:8080/api/v1/comments/posts/1/root"
 
 # 특정 댓글의 대댓글 조회
-curl "http://54.180.251.210:8080/api/v1/comments/1/replies"
+curl "http://3.39.36.234:8080/api/v1/comments/1/replies"
 
 # 댓글 상세 조회
-curl "http://54.180.251.210:8080/api/v1/comments/1"
+curl "http://3.39.36.234:8080/api/v1/comments/1"
 ```
 
 **댓글 수정/삭제 (인증 필요)**
 ```bash
 # 댓글 수정
-curl -X PUT "http://54.180.251.210:8080/api/v1/comments/1?currentUserId=1" \
+curl -X PUT "http://3.39.36.234:8080/api/v1/comments/1?currentUserId=1" \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{
@@ -548,7 +548,7 @@ curl -X PUT "http://54.180.251.210:8080/api/v1/comments/1?currentUserId=1" \
   }'
 
 # 댓글 삭제 (소프트 삭제)
-curl -X DELETE "http://54.180.251.210:8080/api/v1/comments/1?currentUserId=1" \
+curl -X DELETE "http://3.39.36.234:8080/api/v1/comments/1?currentUserId=1" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
@@ -557,17 +557,17 @@ curl -X DELETE "http://54.180.251.210:8080/api/v1/comments/1?currentUserId=1" \
 **좋아요 토글 (인증 필요)**
 ```bash
 # 1. 로그인하여 토큰 받기 (위 5번 참고)
-TOKEN=$(curl -s -X POST http://54.180.251.210:8080/api/v1/auth/login \
+TOKEN=$(curl -s -X POST http://3.39.36.234:8080/api/v1/auth/login \
   -H "Content-Type: application/json" \
   -d '{"email":"test@example.com","password":"Password123@"}' \
   | grep -o '"accessToken":"[^"]*' | cut -d'"' -f4)
 
 # 2. 게시글 좋아요 (첫 번째 호출 시 좋아요 추가)
-curl -X POST "http://54.180.251.210:8080/api/v1/posts/1/like?currentUserId=1" \
+curl -X POST "http://3.39.36.234:8080/api/v1/posts/1/like?currentUserId=1" \
   -H "Authorization: Bearer $TOKEN"
 
 # 3. 게시글 좋아요 다시 호출 (좋아요 취소)
-curl -X POST "http://54.180.251.210:8080/api/v1/posts/1/like?currentUserId=1" \
+curl -X POST "http://3.39.36.234:8080/api/v1/posts/1/like?currentUserId=1" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
@@ -589,16 +589,16 @@ curl -X POST "http://54.180.251.210:8080/api/v1/posts/1/like?currentUserId=1" \
 **좋아요 상태 및 정보 조회**
 ```bash
 # 좋아요 상태 확인
-curl "http://54.180.251.210:8080/api/v1/posts/1/like/status?currentUserId=1"
+curl "http://3.39.36.234:8080/api/v1/posts/1/like/status?currentUserId=1"
 
 # 게시글 좋아요 수 조회
-curl "http://54.180.251.210:8080/api/v1/posts/1/like/count"
+curl "http://3.39.36.234:8080/api/v1/posts/1/like/count"
 
 # 게시글을 좋아요한 사용자 목록 조회
-curl "http://54.180.251.210:8080/api/v1/posts/1/likes"
+curl "http://3.39.36.234:8080/api/v1/posts/1/likes"
 
 # 내가 좋아요한 게시글 목록 조회
-curl "http://54.180.251.210:8080/api/v1/posts/likes/me?currentUserId=1"
+curl "http://3.39.36.234:8080/api/v1/posts/likes/me?currentUserId=1"
 ```
 
 ### 10. 게시글 스크랩 테스트 (스크랩 기능) ✨ NEW!
@@ -606,13 +606,13 @@ curl "http://54.180.251.210:8080/api/v1/posts/likes/me?currentUserId=1"
 **스크랩 추가 (인증 필요)**
 ```bash
 # 1. 로그인하여 토큰 받기
-TOKEN=$(curl -s -X POST http://54.180.251.210:8080/api/v1/auth/login \
+TOKEN=$(curl -s -X POST http://3.39.36.234:8080/api/v1/auth/login \
   -H "Content-Type: application/json" \
   -d '{"email":"test@example.com","password":"Password123@"}' \
   | grep -o '"accessToken":"[^"]*' | cut -d'"' -f4)
 
 # 2. 게시글 스크랩 (기본 폴더에)
-curl -X POST "http://54.180.251.210:8080/api/v1/posts/1/scrap?currentUserId=1" \
+curl -X POST "http://3.39.36.234:8080/api/v1/posts/1/scrap?currentUserId=1" \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{
@@ -621,7 +621,7 @@ curl -X POST "http://54.180.251.210:8080/api/v1/posts/1/scrap?currentUserId=1" \
   }'
 
 # 3. 특정 폴더에 스크랩
-curl -X POST "http://54.180.251.210:8080/api/v1/posts/2/scrap?currentUserId=1" \
+curl -X POST "http://3.39.36.234:8080/api/v1/posts/2/scrap?currentUserId=1" \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{
@@ -655,27 +655,27 @@ curl -X POST "http://54.180.251.210:8080/api/v1/posts/2/scrap?currentUserId=1" \
 **스크랩 취소 및 관리**
 ```bash
 # 스크랩 취소
-curl -X DELETE "http://54.180.251.210:8080/api/v1/posts/1/scrap?currentUserId=1" \
+curl -X DELETE "http://3.39.36.234:8080/api/v1/posts/1/scrap?currentUserId=1" \
   -H "Authorization: Bearer $TOKEN"
 
 # 스크랩 상태 확인
-curl "http://54.180.251.210:8080/api/v1/posts/1/scrap/status?currentUserId=1" \
+curl "http://3.39.36.234:8080/api/v1/posts/1/scrap/status?currentUserId=1" \
   -H "Authorization: Bearer $TOKEN"
 
 # 게시글 스크랩 수 조회
-curl "http://54.180.251.210:8080/api/v1/posts/1/scrap/count" \
+curl "http://3.39.36.234:8080/api/v1/posts/1/scrap/count" \
   -H "Authorization: Bearer $TOKEN"
 
 # 내 스크랩 목록 조회
-curl "http://54.180.251.210:8080/api/v1/posts/scraps/me?currentUserId=1" \
+curl "http://3.39.36.234:8080/api/v1/posts/scraps/me?currentUserId=1" \
   -H "Authorization: Bearer $TOKEN"
 
 # 스크랩 폴더 이동
-curl -X PUT "http://54.180.251.210:8080/api/v1/posts/1/scrap/move?currentUserId=1&targetFolderId=2" \
+curl -X PUT "http://3.39.36.234:8080/api/v1/posts/1/scrap/move?currentUserId=1&targetFolderId=2" \
   -H "Authorization: Bearer $TOKEN"
 
 # 스크랩 검색
-curl "http://54.180.251.210:8080/api/v1/posts/scraps/me/search?currentUserId=1&keyword=테스트" \
+curl "http://3.39.36.234:8080/api/v1/posts/scraps/me/search?currentUserId=1&keyword=테스트" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
@@ -684,7 +684,7 @@ curl "http://54.180.251.210:8080/api/v1/posts/scraps/me/search?currentUserId=1&k
 **스크랩 폴더 생성 (인증 필요)**
 ```bash
 # 1. 새 스크랩 폴더 생성
-curl -X POST "http://54.180.251.210:8080/api/v1/scrap-folders?currentUserId=1" \
+curl -X POST "http://3.39.36.234:8080/api/v1/scrap-folders?currentUserId=1" \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{
@@ -693,7 +693,7 @@ curl -X POST "http://54.180.251.210:8080/api/v1/scrap-folders?currentUserId=1" \
   }'
 
 # 2. 다른 폴더 생성
-curl -X POST "http://54.180.251.210:8080/api/v1/scrap-folders?currentUserId=1" \
+curl -X POST "http://3.39.36.234:8080/api/v1/scrap-folders?currentUserId=1" \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{
@@ -722,15 +722,15 @@ curl -X POST "http://54.180.251.210:8080/api/v1/scrap-folders?currentUserId=1" \
 **스크랩 폴더 관리**
 ```bash
 # 내 스크랩 폴더 목록 조회
-curl "http://54.180.251.210:8080/api/v1/scrap-folders/me?currentUserId=1" \
+curl "http://3.39.36.234:8080/api/v1/scrap-folders/me?currentUserId=1" \
   -H "Authorization: Bearer $TOKEN"
 
 # 특정 폴더 상세 조회
-curl "http://54.180.251.210:8080/api/v1/scrap-folders/2?currentUserId=1" \
+curl "http://3.39.36.234:8080/api/v1/scrap-folders/2?currentUserId=1" \
   -H "Authorization: Bearer $TOKEN"
 
 # 폴더 수정
-curl -X PUT "http://54.180.251.210:8080/api/v1/scrap-folders/2?currentUserId=1" \
+curl -X PUT "http://3.39.36.234:8080/api/v1/scrap-folders/2?currentUserId=1" \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{
@@ -739,18 +739,18 @@ curl -X PUT "http://54.180.251.210:8080/api/v1/scrap-folders/2?currentUserId=1" 
   }'
 
 # 특정 폴더의 스크랩 목록 조회
-curl "http://54.180.251.210:8080/api/v1/posts/scrap-folders/2/scraps?currentUserId=1"
+curl "http://3.39.36.234:8080/api/v1/posts/scrap-folders/2/scraps?currentUserId=1"
 
 # 빈 폴더 목록 조회
-curl "http://54.180.251.210:8080/api/v1/scrap-folders/me/empty?currentUserId=1" \
+curl "http://3.39.36.234:8080/api/v1/scrap-folders/me/empty?currentUserId=1" \
   -H "Authorization: Bearer $TOKEN"
 
 # 폴더 삭제 (스크랩은 기본 폴더로 이동)
-curl -X DELETE "http://54.180.251.210:8080/api/v1/scrap-folders/2?currentUserId=1&moveToDefault=true" \
+curl -X DELETE "http://3.39.36.234:8080/api/v1/scrap-folders/2?currentUserId=1&moveToDefault=true" \
   -H "Authorization: Bearer $TOKEN"
 
 # 기본 폴더 설정
-curl -X POST "http://54.180.251.210:8080/api/v1/scrap-folders/2/set-default?currentUserId=1" \
+curl -X POST "http://3.39.36.234:8080/api/v1/scrap-folders/2/set-default?currentUserId=1" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
@@ -759,14 +759,14 @@ curl -X POST "http://54.180.251.210:8080/api/v1/scrap-folders/2/set-default?curr
 **내 포인트 정보 조회**
 ```bash
 # 1. 로그인하여 토큰 받기
-TOKEN=$(curl -s -X POST http://54.180.251.210:8080/api/v1/auth/login \
+TOKEN=$(curl -s -X POST http://3.39.36.234:8080/api/v1/auth/login \
   -H "Content-Type: application/json" \
   -d '{"email":"test@example.com","password":"Password123@"}' \
   | grep -o '"accessToken":"[^"]*' | cut -d'"' -f4)
 
 # 2. 내 포인트 정보 조회
 
-curl "http://54.180.251.210:8080/api/v1/points/me?currentUserId=1" \
+curl "http://3.39.36.234:8080/api/v1/points/me?currentUserId=1" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
@@ -793,7 +793,7 @@ curl "http://54.180.251.210:8080/api/v1/points/me?currentUserId=1" \
 
 ```bash
 **특정 사용자 생성**
-curl -X POST http://54.180.251.210:8080/api/v1/users/register \
+curl -X POST http://3.39.36.234:8080/api/v1/users/register \
   -H "Content-Type: application/json" \
   -d '{
     "email": "test2@example.com",
@@ -805,7 +805,7 @@ curl -X POST http://54.180.251.210:8080/api/v1/users/register \
 **관리자 포인트 관리 (관리자 전용)**
 ```bash
 # 사용자에게 포인트 지급
-curl -X POST "http://54.180.251.210:8080/api/v1/points/admin/adjust?currentUserId=1" \
+curl -X POST "http://3.39.36.234:8080/api/v1/points/admin/adjust?currentUserId=1" \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{
@@ -815,7 +815,7 @@ curl -X POST "http://54.180.251.210:8080/api/v1/points/admin/adjust?currentUserI
   }'
 
 # 사용자 포인트 차감
-curl -X POST "http://54.180.251.210:8080/api/v1/points/admin/adjust?currentUserId=1" \
+curl -X POST "http://3.39.36.234:8080/api/v1/points/admin/adjust?currentUserId=1" \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{
@@ -826,11 +826,11 @@ curl -X POST "http://54.180.251.210:8080/api/v1/points/admin/adjust?currentUserI
 
 ```bash
 # 특정 사용자 포인트 조회
-curl "http://54.180.251.210:8080/api/v1/points/admin/users/1" \
+curl "http://3.39.36.234:8080/api/v1/points/admin/users/1" \
   -H "Authorization: Bearer $TOKEN"
 
 # 특정 레벨 이상 사용자 조회
-curl "http://54.180.251.210:8080/api/v1/points/admin/users/level/LEVEL_5" \
+curl "http://3.39.36.234:8080/api/v1/points/admin/users/level/LEVEL_5" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
@@ -838,15 +838,15 @@ curl "http://54.180.251.210:8080/api/v1/points/admin/users/level/LEVEL_5" \
 **포인트 거래 내역 및 랭킹**
 ```bash
 # 내 포인트 거래 내역 조회
-curl "http://54.180.251.210:8080/api/v1/points/me/transactions?currentUserId=1" \
+curl "http://3.39.36.234:8080/api/v1/points/me/transactions?currentUserId=1" \
   -H "Authorization: Bearer $TOKEN"
 
 # 기간별 거래 내역
-curl "http://54.180.251.210:8080/api/v1/points/me/transactions/period?currentUserId=1&startDate=2025-12-01T00:00:00&endDate=2025-12-31T23:59:59" \
+curl "http://3.39.36.234:8080/api/v1/points/me/transactions/period?currentUserId=1&startDate=2025-12-01T00:00:00&endDate=2025-12-31T23:59:59" \
   -H "Authorization: Bearer $TOKEN"
 
 # 포인트 사용
-curl -X POST "http://54.180.251.210:8080/api/v1/points/me/use?currentUserId=2" \
+curl -X POST "http://3.39.36.234:8080/api/v1/points/me/use?currentUserId=2" \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{
@@ -855,15 +855,15 @@ curl -X POST "http://54.180.251.210:8080/api/v1/points/me/use?currentUserId=2" \
   }'
 
 # 포인트 랭킹 조회 (상위 50명)
-curl "http://54.180.251.210:8080/api/v1/points/ranking?size=50" \
+curl "http://3.39.36.234:8080/api/v1/points/ranking?size=50" \
   -H "Authorization: Bearer $TOKEN"
 
 # 레벨별 사용자 통계
-curl "http://54.180.251.210:8080/api/v1/points/statistics/levels" \
+curl "http://3.39.36.234:8080/api/v1/points/statistics/levels" \
   -H "Authorization: Bearer $TOKEN"
 
 # 전체 포인트 통계
-curl "http://54.180.251.210:8080/api/v1/points/statistics/total" \
+curl "http://3.39.36.234:8080/api/v1/points/statistics/total" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
@@ -873,23 +873,23 @@ curl "http://54.180.251.210:8080/api/v1/points/statistics/total" \
 **역할 및 권한 정보 조회 (인증 불필요)**
 ```bash
 # 1. 모든 역할 정보 조회
-curl "http://54.180.251.210:8080/api/v1/roles" \
+curl "http://3.39.36.234:8080/api/v1/roles" \
   -H "Authorization: Bearer $TOKEN"
 
 # 2. 특정 역할 상세 정보 조회
-curl "http://54.180.251.210:8080/api/v1/roles/MODERATOR" \
+curl "http://3.39.36.234:8080/api/v1/roles/MODERATOR" \
   -H "Authorization: Bearer $TOKEN"
 
 # 3. 모든 권한 정보 조회
-curl "http://54.180.251.210:8080/api/v1/roles/permissions" \
+curl "http://3.39.36.234:8080/api/v1/roles/permissions" \
   -H "Authorization: Bearer $TOKEN"
 
 # 4. 특정 역할의 권한 목록 조회
-curl "http://54.180.251.210:8080/api/v1/roles/ADMIN/permissions" \
+curl "http://3.39.36.234:8080/api/v1/roles/ADMIN/permissions" \
   -H "Authorization: Bearer $TOKEN"
 
 # 5. 역할별 사용자 통계
-curl "http://54.180.251.210:8080/api/v1/roles/statistics" \
+curl "http://3.39.36.234:8080/api/v1/roles/statistics" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
@@ -929,13 +929,13 @@ curl "http://54.180.251.210:8080/api/v1/roles/statistics" \
 **사용자 권한 확인**
 ```bash
 # 로그인하여 토큰 받기
-TOKEN=$(curl -s -X POST http://54.180.251.210:8080/api/v1/auth/login \
+TOKEN=$(curl -s -X POST http://3.39.36.234:8080/api/v1/auth/login \
   -H "Content-Type: application/json" \
   -d '{"email":"test@example.com","password":"Password123@"}' \
   | grep -o '"accessToken":"[^"]*' | cut -d'"' -f4)
 
 # 특정 사용자의 특정 권한 확인
-curl "http://54.180.251.210:8080/api/v1/roles/check-permission?userId=2&permission=POST_DELETE_ALL" \
+curl "http://3.39.36.234:8080/api/v1/roles/check-permission?userId=2&permission=POST_DELETE_ALL" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
@@ -955,7 +955,7 @@ curl "http://54.180.251.210:8080/api/v1/roles/check-permission?userId=2&permissi
 **관리자 역할 관리 (관리자 전용)**
 ```bash
 # 1. 사용자 역할 변경 (관리자만 가능)
-curl -X POST "http://54.180.251.210:8080/api/v1/roles/admin/change?currentUserId=1" \
+curl -X POST "http://3.39.36.234:8080/api/v1/roles/admin/change?currentUserId=1" \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{
@@ -964,11 +964,11 @@ curl -X POST "http://54.180.251.210:8080/api/v1/roles/admin/change?currentUserId
   }'
 
 # 2. 특정 역할의 사용자 목록 조회
-curl "http://54.180.251.210:8080/api/v1/roles/admin/MODERATOR/users" \
+curl "http://3.39.36.234:8080/api/v1/roles/admin/MODERATOR/users" \
   -H "Authorization: Bearer $TOKEN"
 
 # 3. 관리자 목록 조회
-curl "http://54.180.251.210:8080/api/v1/roles/admin/admins" \
+curl "http://3.39.36.234:8080/api/v1/roles/admin/admins" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
@@ -986,13 +986,13 @@ curl "http://54.180.251.210:8080/api/v1/roles/admin/admins" \
 ```bash
 # 시나리오: 사용자가 LEVEL 7에 도달하면 자동으로 POWER_USER로 승격
 # 1. 사용자 포인트 조회 (현재 LEVEL 6, USER 역할)
-curl "http://54.180.251.210:8080/api/v1/points/me?currentUserId=2" \
+curl "http://3.39.36.234:8080/api/v1/points/me?currentUserId=2" \
   -H "Authorization: Bearer $TOKEN"
 
 # → totalPoints: 7500, currentLevel: LEVEL_6
 
 # 2. 관리자가 포인트 지급 (LEVEL 7로 상승)
-curl -X POST "http://54.180.251.210:8080/api/v1/points/admin/adjust?currentUserId=1" \
+curl -X POST "http://3.39.36.234:8080/api/v1/points/admin/adjust?currentUserId=1" \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{
@@ -1002,7 +1002,7 @@ curl -X POST "http://54.180.251.210:8080/api/v1/points/admin/adjust?currentUserI
   }'
 
 # 3. 포인트 재조회 (LEVEL 7 달성, 자동으로 POWER_USER로 승격됨)
-curl "http://54.180.251.210:8080/api/v1/points/me?currentUserId=2" \
+curl "http://3.39.36.234:8080/api/v1/points/me?currentUserId=2" \
   -H "Authorization: Bearer $TOKEN"
 
 # → totalPoints: 8500, currentLevel: LEVEL_7, role: POWER_USER
@@ -1013,13 +1013,13 @@ curl "http://54.180.251.210:8080/api/v1/points/me?currentUserId=2" \
 **게시글 신고하기 (인증 필요)**
 ```bash
 # 1. 로그인하여 토큰 받기
-TOKEN=$(curl -s -X POST http://54.180.251.210:8080/api/v1/auth/login \
+TOKEN=$(curl -s -X POST http://3.39.36.234:8080/api/v1/auth/login \
   -H "Content-Type: application/json" \
   -d '{"email":"test@example.com","password":"Password123@"}' \
   | grep -o '"accessToken":"[^"]*' | cut -d'"' -f4)
 
 # 2. 게시글 신고 (스팸)
-curl -X POST "http://54.180.251.210:8080/api/v1/reports?currentUserId=1" \
+curl -X POST "http://3.39.36.234:8080/api/v1/reports?currentUserId=1" \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{
@@ -1030,7 +1030,7 @@ curl -X POST "http://54.180.251.210:8080/api/v1/reports?currentUserId=1" \
   }'
 
 # 3. 댓글 신고 (욕설)
-curl -X POST "http://54.180.251.210:8080/api/v1/reports?currentUserId=1" \
+curl -X POST "http://3.39.36.234:8080/api/v1/reports?currentUserId=1" \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{
@@ -1041,7 +1041,7 @@ curl -X POST "http://54.180.251.210:8080/api/v1/reports?currentUserId=1" \
   }'
 
 # 4. 사용자 신고 (혐오 발언)
-curl -X POST "http://54.180.251.210:8080/api/v1/reports?currentUserId=1" \
+curl -X POST "http://3.39.36.234:8080/api/v1/reports?currentUserId=1" \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{
@@ -1080,42 +1080,42 @@ curl -X POST "http://54.180.251.210:8080/api/v1/reports?currentUserId=1" \
 **신고 조회 및 관리**
 ```bash
 # 신고 상세 조회
-curl "http://54.180.251.210:8080/api/v1/reports/1" \
+curl "http://3.39.36.234:8080/api/v1/reports/1" \
   -H "Authorization: Bearer $TOKEN"
 
 # 내가 신고한 목록 조회
-curl "http://54.180.251.210:8080/api/v1/reports/me?currentUserId=1" \
+curl "http://3.39.36.234:8080/api/v1/reports/me?currentUserId=1" \
   -H "Authorization: Bearer $TOKEN"
 
 # 특정 게시글에 대한 신고 목록 조회
-curl "http://54.180.251.210:8080/api/v1/reports/target/POST/1" \
+curl "http://3.39.36.234:8080/api/v1/reports/target/POST/1" \
   -H "Authorization: Bearer $TOKEN"
 
 # 특정 댓글에 대한 신고 수 조회
-curl "http://54.180.251.210:8080/api/v1/reports/statistics/target/COMMENT/1/count" \
+curl "http://3.39.36.234:8080/api/v1/reports/statistics/target/COMMENT/1/count" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
 **관리자 신고 관리 (관리자 전용)**
 ```bash
 # 1. 대기 중인 신고 목록 조회
-curl "http://54.180.251.210:8080/api/v1/reports/pending?page=0&size=20" \
+curl "http://3.39.36.234:8080/api/v1/reports/pending?page=0&size=20" \
   -H "Authorization: Bearer $TOKEN"
 
 # 2. 고위험 신고 목록 조회 (음란물, 폭력, 혐오발언 등)
-curl "http://54.180.251.210:8080/api/v1/reports/high-severity?page=0&size=20" \
+curl "http://3.39.36.234:8080/api/v1/reports/high-severity?page=0&size=20" \
   -H "Authorization: Bearer $TOKEN"
 
 # 3. 상태별 신고 목록 조회 (PENDING, IN_REVIEW, APPROVED, REJECTED)
-curl "http://54.180.251.210:8080/api/v1/reports/status/PENDING?page=0&size=20" \
+curl "http://3.39.36.234:8080/api/v1/reports/status/PENDING?page=0&size=20" \
   -H "Authorization: Bearer $TOKEN"
 
 # 4. 신고 검토 시작 (관리자 ID: 1)
-curl -X POST "http://54.180.251.210:8080/api/v1/reports/1/review/start?currentUserId=1" \
+curl -X POST "http://3.39.36.234:8080/api/v1/reports/1/review/start?currentUserId=1" \
   -H "Authorization: Bearer $TOKEN"
 
 # 5. 신고 승인 및 조치
-curl -X POST "http://54.180.251.210:8080/api/v1/reports/1/approve?currentUserId=1" \
+curl -X POST "http://3.39.36.234:8080/api/v1/reports/1/approve?currentUserId=1" \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{
@@ -1124,7 +1124,7 @@ curl -X POST "http://54.180.251.210:8080/api/v1/reports/1/approve?currentUserId=
   }'
 
 # 6. 신고 반려
-curl -X POST "http://54.180.251.210:8080/api/v1/reports/2/reject?currentUserId=1" \
+curl -X POST "http://3.39.36.234:8080/api/v1/reports/2/reject?currentUserId=1" \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{
@@ -1132,19 +1132,19 @@ curl -X POST "http://54.180.251.210:8080/api/v1/reports/2/reject?currentUserId=1
   }'
 
 # 7. 신고 통계 조회
-curl "http://54.180.251.210:8080/api/v1/reports/statistics" \
+curl "http://3.39.36.234:8080/api/v1/reports/statistics" \
   -H "Authorization: Bearer $TOKEN"
 
 # 8. 기간별 신고 수 조회
-curl "http://54.180.251.210:8080/api/v1/reports/statistics/count?startDate=2025-12-01T00:00:00&endDate=2025-12-31T23:59:59" \
+curl "http://3.39.36.234:8080/api/v1/reports/statistics/count?startDate=2025-12-01T00:00:00&endDate=2025-12-31T23:59:59" \
   -H "Authorization: Bearer $TOKEN"
 
 # 9. 특정 사용자에 대한 신고 목록 조회
-curl "http://54.180.251.210:8080/api/v1/reports/user/2?page=0&size=20" \
+curl "http://3.39.36.234:8080/api/v1/reports/user/2?page=0&size=20" \
   -H "Authorization: Bearer $TOKEN"
 
 # 10. 대상 유형별 신고 목록 (POST, COMMENT, USER, CHAT)
-curl "http://54.180.251.210:8080/api/v1/reports/type/POST?page=0&size=20" \
+curl "http://3.39.36.234:8080/api/v1/reports/type/POST?page=0&size=20" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
@@ -1201,13 +1201,13 @@ curl "http://54.180.251.210:8080/api/v1/reports/type/POST?page=0&size=20" \
 **수동 제재 부여 (관리자 전용)**
 ```bash
 # 1. 관리자 로그인하여 토큰 받기
-TOKEN=$(curl -s -X POST http://54.180.251.210:8080/api/v1/auth/login \
+TOKEN=$(curl -s -X POST http://3.39.36.234:8080/api/v1/auth/login \
   -H "Content-Type: application/json" \
   -d '{"email":"admin@example.com","password":"Password123@"}' \
   | grep -o '"accessToken":"[^"]*' | cut -d'"' -f4)
 
 # 2. 24시간 글쓰기 금지 제재 부여
-curl -X POST "http://54.180.251.210:8080/api/v1/penalties?currentUserId=1" \
+curl -X POST "http://3.39.36.234:8080/api/v1/penalties?currentUserId=1" \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{
@@ -1217,7 +1217,7 @@ curl -X POST "http://54.180.251.210:8080/api/v1/penalties?currentUserId=1" \
   }'
 
 # 3. 7일 댓글 금지 제재 부여
-curl -X POST "http://54.180.251.210:8080/api/v1/penalties?currentUserId=1" \
+curl -X POST "http://3.39.36.234:8080/api/v1/penalties?currentUserId=1" \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{
@@ -1227,7 +1227,7 @@ curl -X POST "http://54.180.251.210:8080/api/v1/penalties?currentUserId=1" \
   }'
 
 # 4. 계정 정지 (영구)
-curl -X POST "http://54.180.251.210:8080/api/v1/penalties?currentUserId=1" \
+curl -X POST "http://3.39.36.234:8080/api/v1/penalties?currentUserId=1" \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{
@@ -1263,30 +1263,30 @@ curl -X POST "http://54.180.251.210:8080/api/v1/penalties?currentUserId=1" \
 **제재 조회 및 관리**
 ```bash
 # 사용자의 활성 제재 조회
-curl "http://54.180.251.210:8080/api/v1/penalties/user/2/active" \
+curl "http://3.39.36.234:8080/api/v1/penalties/user/2/active" \
   -H "Authorization: Bearer $TOKEN"
 
 # 사용자의 모든 제재 이력 조회
-curl "http://54.180.251.210:8080/api/v1/penalties/user/2?page=0&size=20" \
+curl "http://3.39.36.234:8080/api/v1/penalties/user/2?page=0&size=20" \
   -H "Authorization: Bearer $TOKEN"
 
 # 모든 활성 제재 목록 조회 (관리자)
-curl "http://54.180.251.210:8080/api/v1/penalties/active?page=0&size=20" \
+curl "http://3.39.36.234:8080/api/v1/penalties/active?page=0&size=20" \
   -H "Authorization: Bearer $TOKEN"
 
 # 제재 해제
-curl -X DELETE "http://54.180.251.210:8080/api/v1/penalties/1?currentUserId=1" \
+curl -X DELETE "http://3.39.36.234:8080/api/v1/penalties/1?currentUserId=1" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
 **제재 확인 API**
 ```bash
 # 글쓰기 가능 여부 확인
-curl "http://54.180.251.210:8080/api/v1/penalties/users/2/can-post" \
+curl "http://3.39.36.234:8080/api/v1/penalties/users/2/can-post" \
   -H "Authorization: Bearer $TOKEN"
 
 # 댓글 작성 가능 여부 확인
-curl "http://54.180.251.210:8080/api/v1/penalties/users/2/can-comment" \
+curl "http://3.39.36.234:8080/api/v1/penalties/users/2/can-comment" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
@@ -1306,7 +1306,7 @@ curl "http://54.180.251.210:8080/api/v1/penalties/users/2/can-comment" \
 **제재 중 글쓰기 시도 시 에러:**
 ```bash
 # 제재 중인 사용자가 게시글 작성 시도 - 에러 try catch 문 필요
-curl -X POST "http://54.180.251.210:8080/api/v1/posts?currentUserId=2" \
+curl -X POST "http://3.39.36.234:8080/api/v1/posts?currentUserId=2" \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{
@@ -1329,7 +1329,7 @@ curl -X POST "http://54.180.251.210:8080/api/v1/posts?currentUserId=2" \
 ```bash
 # 시나리오: 신고 3회 승인 → 자동 24시간 글쓰기 금지
 # 1. 사용자에 대한 신고 승인 (1회)
-curl -X POST "http://54.180.251.210:8080/api/v1/reports/1/approve?currentUserId=1" \
+curl -X POST "http://3.39.36.234:8080/api/v1/reports/1/approve?currentUserId=1" \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{
@@ -1338,7 +1338,7 @@ curl -X POST "http://54.180.251.210:8080/api/v1/reports/1/approve?currentUserId=
   }'
 
 # 2. 동일 사용자에 대한 신고 승인 (2회)
-curl -X POST "http://54.180.251.210:8080/api/v1/reports/2/approve?currentUserId=1" \
+curl -X POST "http://3.39.36.234:8080/api/v1/reports/2/approve?currentUserId=1" \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{
@@ -1347,7 +1347,7 @@ curl -X POST "http://54.180.251.210:8080/api/v1/reports/2/approve?currentUserId=
   }'
 
 # 3. 동일 사용자에 대한 신고 승인 (3회) → 자동 24시간 제재
-curl -X POST "http://54.180.251.210:8080/api/v1/reports/3/approve?currentUserId=1" \
+curl -X POST "http://3.39.36.234:8080/api/v1/reports/3/approve?currentUserId=1" \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{
@@ -1356,7 +1356,7 @@ curl -X POST "http://54.180.251.210:8080/api/v1/reports/3/approve?currentUserId=
   }'
 
 # 4. 활성 제재 확인 → POST_BAN_24H 제재가 자동 부여됨
-curl "http://54.180.251.210:8080/api/v1/penalties/user/2/active" \
+curl "http://3.39.36.234:8080/api/v1/penalties/user/2/active" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
@@ -1541,7 +1541,7 @@ com.community.platform
 
 ```bash
 # 게시글에 이미지 파일 첨부 (S3에 저장됨)
-curl -X POST 'http://54.180.251.210:8080/api/v1/posts/1/attachments?currentUserId=1' \
+curl -X POST 'http://3.39.36.234:8080/api/v1/posts/1/attachments?currentUserId=1' \
   -F 'files=@/path/to/image1.jpg' \
   -F 'files=@/path/to/image2.png'
 
@@ -1591,7 +1591,7 @@ curl -X POST 'http://54.180.251.210:8080/api/v1/posts/1/attachments?currentUserI
 **첨부파일 목록 조회 (GET /api/v1/posts/{postId}/attachments)**
 
 ```bash
-curl 'http://54.180.251.210:8080/api/v1/posts/1/attachments'
+curl 'http://3.39.36.234:8080/api/v1/posts/1/attachments'
 
 # 응답 예시
 {
@@ -1617,7 +1617,7 @@ curl 'http://54.180.251.210:8080/api/v1/posts/1/attachments'
 
 ```bash
 # 작성자만 삭제 가능
-curl -X DELETE 'http://54.180.251.210:8080/api/v1/posts/attachments/1?currentUserId=1'
+curl -X DELETE 'http://3.39.36.234:8080/api/v1/posts/attachments/1?currentUserId=1'
 
 # 응답 예시
 {
@@ -1627,7 +1627,7 @@ curl -X DELETE 'http://54.180.251.210:8080/api/v1/posts/attachments/1?currentUse
 }
 
 # 권한 없는 사용자가 삭제 시도 시 에러
-curl -X DELETE 'http://54.180.251.210:8080/api/v1/posts/attachments/1?currentUserId=2'
+curl -X DELETE 'http://3.39.36.234:8080/api/v1/posts/attachments/1?currentUserId=2'
 
 {
   "success": false,
@@ -1683,7 +1683,7 @@ curl -X DELETE 'http://54.180.251.210:8080/api/v1/posts/attachments/1?currentUse
 
 ```bash
 # 1. 처음 게시글 조회 (조회수 +1)
-curl 'http://54.180.251.210:8080/api/v1/posts/1?currentUserId=1'
+curl 'http://3.39.36.234:8080/api/v1/posts/1?currentUserId=1'
 
 # 응답에서 viewCount 확인
 {
@@ -1697,7 +1697,7 @@ curl 'http://54.180.251.210:8080/api/v1/posts/1?currentUserId=1'
 }
 
 # 2. 같은 사용자가 즉시 다시 조회 (조회수 증가 안 함)
-curl 'http://54.180.251.210:8080/api/v1/posts/1?currentUserId=1'
+curl 'http://3.39.36.234:8080/api/v1/posts/1?currentUserId=1'
 
 # viewCount 변화 없음
 {
@@ -1710,7 +1710,7 @@ curl 'http://54.180.251.210:8080/api/v1/posts/1?currentUserId=1'
 }
 
 # 3. 다른 사용자가 조회 (조회수 +1)
-curl 'http://54.180.251.210:8080/api/v1/posts/1?currentUserId=2'
+curl 'http://3.39.36.234:8080/api/v1/posts/1?currentUserId=2'
 
 {
   "success": true,
@@ -1722,7 +1722,7 @@ curl 'http://54.180.251.210:8080/api/v1/posts/1?currentUserId=2'
 }
 
 # 4. 비로그인 사용자 조회 (IP 기반, 조회수 +1)
-curl 'http://54.180.251.210:8080/api/v1/posts/1'
+curl 'http://3.39.36.234:8080/api/v1/posts/1'
 
 {
   "success": true,
@@ -1734,7 +1734,7 @@ curl 'http://54.180.251.210:8080/api/v1/posts/1'
 }
 
 # 5. 같은 비로그인 사용자가 다시 조회 (같은 IP, 조회수 증가 안 함)
-curl 'http://54.180.251.210:8080/api/v1/posts/1'
+curl 'http://3.39.36.234:8080/api/v1/posts/1'
 
 {
   "success": true,
@@ -1779,7 +1779,7 @@ TTL post:view:1
 
 ```bash
 # 작성자가 자신의 게시글 삭제
-curl -X DELETE 'http://54.180.251.210:8080/api/v1/posts/1?currentUserId=1'
+curl -X DELETE 'http://3.39.36.234:8080/api/v1/posts/1?currentUserId=1'
 
 # 응답
 {
@@ -1789,7 +1789,7 @@ curl -X DELETE 'http://54.180.251.210:8080/api/v1/posts/1?currentUserId=1'
 }
 
 # 삭제 후 게시글 조회 시
-curl 'http://54.180.251.210:8080/api/v1/posts/1'
+curl 'http://3.39.36.234:8080/api/v1/posts/1'
 
 # 에러 응답 (DELETED 상태의 게시글은 조회 불가)
 {
@@ -1803,7 +1803,7 @@ curl 'http://54.180.251.210:8080/api/v1/posts/1'
 
 ```bash
 # GET /api/v1/posts/deleted
-curl 'http://54.180.251.210:8080/api/v1/posts/deleted?currentUserId=1&page=0&size=20'
+curl 'http://3.39.36.234:8080/api/v1/posts/deleted?currentUserId=1&page=0&size=20'
 
 # 응답 예시
 {
@@ -1836,7 +1836,7 @@ curl 'http://54.180.251.210:8080/api/v1/posts/deleted?currentUserId=1&page=0&siz
 
 ```bash
 # POST /api/v1/posts/{postId}/restore
-curl -X POST 'http://54.180.251.210:8080/api/v1/posts/1/restore?currentUserId=1'
+curl -X POST 'http://3.39.36.234:8080/api/v1/posts/1/restore?currentUserId=1'
 
 # 응답
 {
@@ -1846,7 +1846,7 @@ curl -X POST 'http://54.180.251.210:8080/api/v1/posts/1/restore?currentUserId=1'
 }
 
 # 복구 후 게시글 조회 가능
-curl 'http://54.180.251.210:8080/api/v1/posts/1'
+curl 'http://3.39.36.234:8080/api/v1/posts/1'
 
 {
   "success": true,
@@ -1865,7 +1865,7 @@ curl 'http://54.180.251.210:8080/api/v1/posts/1'
 
 ```bash
 # 1. 삭제되지 않은 게시글 복구 시도
-curl -X POST 'http://54.180.251.210:8080/api/v1/posts/2/restore?currentUserId=1'
+curl -X POST 'http://3.39.36.234:8080/api/v1/posts/2/restore?currentUserId=1'
 
 {
   "success": false,
@@ -1874,7 +1874,7 @@ curl -X POST 'http://54.180.251.210:8080/api/v1/posts/2/restore?currentUserId=1'
 }
 
 # 2. 존재하지 않는 게시글 복구 시도
-curl -X POST 'http://54.180.251.210:8080/api/v1/posts/999/restore?currentUserId=1'
+curl -X POST 'http://3.39.36.234:8080/api/v1/posts/999/restore?currentUserId=1'
 
 {
   "success": false,
@@ -1891,7 +1891,7 @@ curl -X POST 'http://54.180.251.210:8080/api/v1/posts/999/restore?currentUserId=
 
 ```bash
 # 1. 게시글 작성
-curl -X POST 'http://54.180.251.210:8080/api/v1/posts?currentUserId=1' \
+curl -X POST 'http://3.39.36.234:8080/api/v1/posts?currentUserId=1' \
   -H 'Content-Type: application/json' \
   -d '{
     "categoryId": 1,
@@ -1912,7 +1912,7 @@ curl -X POST 'http://54.180.251.210:8080/api/v1/posts?currentUserId=1' \
 }
 
 # 2. 게시글에 이미지 첨부
-curl -X POST 'http://54.180.251.210:8080/api/v1/posts/10/attachments?currentUserId=1' \
+curl -X POST 'http://3.39.36.234:8080/api/v1/posts/10/attachments?currentUserId=1' \
   -F 'files=@/home/user/jeju1.jpg' \
   -F 'files=@/home/user/jeju2.jpg' \
   -F 'files=@/home/user/jeju3.jpg'
@@ -1950,10 +1950,10 @@ curl -X POST 'http://54.180.251.210:8080/api/v1/posts/10/attachments?currentUser
 }
 
 # 3. 게시글 발행
-curl -X POST 'http://54.180.251.210:8080/api/v1/posts/10/publish?currentUserId=1'
+curl -X POST 'http://3.39.36.234:8080/api/v1/posts/10/publish?currentUserId=1'
 
 # 4. 게시글 조회 (첨부파일 목록 포함)
-curl 'http://54.180.251.210:8080/api/v1/posts/10?currentUserId=1'
+curl 'http://3.39.36.234:8080/api/v1/posts/10?currentUserId=1'
 
 {
   "success": true,
@@ -2093,19 +2093,19 @@ Content-Type: application/json
 
 ```bash
 # 1. 사용자 1이 게시글 작성 및 발행
-curl -X POST 'http://54.180.251.210:8080/api/v1/posts?currentUserId=1' \
+curl -X POST 'http://3.39.36.234:8080/api/v1/posts?currentUserId=1' \
   -H 'Content-Type: application/json' \
   -d '{"categoryId": 1, "title": "테스트", "content": "댓글 테스트", "contentType": "MARKDOWN"}'
 
-curl -X POST 'http://54.180.251.210:8080/api/v1/posts/20/publish?currentUserId=1'
+curl -X POST 'http://3.39.36.234:8080/api/v1/posts/20/publish?currentUserId=1'
 
 # 2. 사용자 2가 댓글 작성 (CommentCreatedEvent 자동 발행)
-curl -X POST 'http://54.180.251.210:8080/api/v1/posts/20/comments?currentUserId=2' \
+curl -X POST 'http://3.39.36.234:8080/api/v1/posts/20/comments?currentUserId=2' \
   -H 'Content-Type: application/json' \
   -d '{"content": "좋은 글이네요!"}'
 
 # 3. 사용자 1의 알림 확인 (자동으로 알림 생성됨!)
-curl 'http://54.180.251.210:8080/api/v1/notifications?currentUserId=1'
+curl 'http://3.39.36.234:8080/api/v1/notifications?currentUserId=1'
 
 # 응답:
 {
@@ -2131,10 +2131,10 @@ curl 'http://54.180.251.210:8080/api/v1/notifications?currentUserId=1'
 
 ```bash
 # 사용자 2가 게시글에 좋아요 (LikeCreatedEvent 발행)
-curl -X POST 'http://54.180.251.210:8080/api/v1/posts/20/like?currentUserId=2'
+curl -X POST 'http://3.39.36.234:8080/api/v1/posts/20/like?currentUserId=2'
 
 # 사용자 1의 알림 확인
-curl 'http://54.180.251.210:8080/api/v1/notifications?currentUserId=1'
+curl 'http://3.39.36.234:8080/api/v1/notifications?currentUserId=1'
 
 # 응답: 좋아요 알림 자동 생성
 {
@@ -2158,7 +2158,7 @@ curl 'http://54.180.251.210:8080/api/v1/notifications?currentUserId=1'
 # 포인트 획득으로 레벨업 (UserLevelUpEvent 자동 발행)
 # 예: 595점 → 610점으로 증가하여 LEVEL_3 달성
 
-curl 'http://54.180.251.210:8080/api/v1/notifications?currentUserId=1'
+curl 'http://3.39.36.234:8080/api/v1/notifications?currentUserId=1'
 
 # 응답: 레벨업 알림 자동 생성
 {
@@ -2180,7 +2180,7 @@ curl 'http://54.180.251.210:8080/api/v1/notifications?currentUserId=1'
 
 ```bash
 # 관리자가 제재 부여 (UserPenaltyCreatedEvent 발행)
-curl -X POST 'http://54.180.251.210:8080/api/v1/penalties?currentUserId=1' \
+curl -X POST 'http://3.39.36.234:8080/api/v1/penalties?currentUserId=1' \
   -H 'Content-Type: application/json' \
   -d '{
     "targetUserId": 2,
@@ -2189,7 +2189,7 @@ curl -X POST 'http://54.180.251.210:8080/api/v1/penalties?currentUserId=1' \
   }'
 
 # 사용자 2의 알림 확인
-curl 'http://54.180.251.210:8080/api/v1/notifications?currentUserId=2'
+curl 'http://3.39.36.234:8080/api/v1/notifications?currentUserId=2'
 
 # 응답: 제재 알림 자동 생성
 {
@@ -2213,7 +2213,7 @@ curl 'http://54.180.251.210:8080/api/v1/notifications?currentUserId=2'
 
 ```bash
 # 좋아요 알림을 받고 싶지 않은 경우
-curl -X PUT 'http://54.180.251.210:8080/api/v1/notifications/preferences?currentUserId=1' \
+curl -X PUT 'http://3.39.36.234:8080/api/v1/notifications/preferences?currentUserId=1' \
   -H 'Content-Type: application/json' \
   -d '{
     "notifyComment": true,
@@ -2226,9 +2226,9 @@ curl -X PUT 'http://54.180.251.210:8080/api/v1/notifications/preferences?current
   }'
 
 # 이후 좋아요를 받아도 알림이 생성되지 않음
-curl -X POST 'http://54.180.251.210:8080/api/v1/posts/20/like?currentUserId=3'
+curl -X POST 'http://3.39.36.234:8080/api/v1/posts/20/like?currentUserId=3'
 
-curl 'http://54.180.251.210:8080/api/v1/notifications?currentUserId=1'
+curl 'http://3.39.36.234:8080/api/v1/notifications?currentUserId=1'
 # 좋아요 알림 없음 (설정에서 OFF했기 때문)
 ```
 
