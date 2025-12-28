@@ -26,6 +26,7 @@ public interface UserMapper {
     @Mapping(source = "id", target = "id")
     @Mapping(source = "email", target = "email")
     @Mapping(source = "nickname", target = "nickname")
+    @Mapping(source = "role", target = "role")
     @Mapping(source = "status", target = "status")
     @Mapping(source = "createdAt", target = "createdAt")
     @Mapping(source = "lastLoginAt", target = "lastLoginAt")
@@ -63,6 +64,7 @@ public interface UserMapper {
                 .id(user.getId())
                 .email(user.getEmail())
                 .nickname(user.getNickname())
+                .role(user.getRole())
                 .status(user.getStatus())
                 .createdAt(user.getCreatedAt())
                 .lastLoginAt(user.getLastLoginAt());

@@ -58,7 +58,7 @@ public class AuthService {
                     .orElseThrow(() -> new UserNotFoundException(email));
             
             // JWT 토큰 생성
-            List<String> authorities = Arrays.asList("ROLE_USER"); // 기본 권한
+            List<String> authorities = Arrays.asList(user.getRole().getAuthority());
             String accessToken = jwtTokenProvider.createAccessToken(
                 user.getId(), user.getEmail(), authorities);
             String refreshToken = jwtTokenProvider.createRefreshToken(
@@ -107,7 +107,7 @@ public class AuthService {
                 .orElseThrow(() -> new UserNotFoundException(userId));
         
         // 새로운 토큰 생성
-        List<String> authorities = Arrays.asList("ROLE_USER");
+        List<String> authorities = Arrays.asList(user.getRole().getAuthority());
         String newAccessToken = jwtTokenProvider.createAccessToken(
             user.getId(), user.getEmail(), authorities);
         String newRefreshToken = jwtTokenProvider.createRefreshToken(

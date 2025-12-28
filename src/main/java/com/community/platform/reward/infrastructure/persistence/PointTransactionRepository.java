@@ -83,4 +83,10 @@ public interface PointTransactionRepository extends JpaRepository<PointTransacti
     Long sumPointsByPeriod(
         @Param("startDate") LocalDateTime startDate,
         @Param("endDate") LocalDateTime endDate);
+
+    /**
+     * 전체 시스템 포인트 합계 (관리자 통계용)
+     */
+    @Query("SELECT COALESCE(SUM(pt.points), 0) FROM PointTransaction pt WHERE pt.points > 0")
+    Long getTotalPoints();
 }

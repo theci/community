@@ -72,4 +72,9 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     // 역할별 사용자 목록 조회 (페이징)
     Page<User> findByRole(UserRole role, Pageable pageable);
+
+    // ========== 통계 관련 메서드 (Phase 9) ==========
+
+    // 상태별 사용자 수 조회
+    long countByStatus(UserStatus status);
 }
