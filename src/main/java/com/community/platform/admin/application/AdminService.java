@@ -245,4 +245,151 @@ public class AdminService {
                 .totalComments(totalComments)
                 .build();
     }
+
+    // ========== 콘텐츠 관리 (Content Moderation) ==========
+
+    /**
+     * 게시글 목록 조회 (관리자용 - 상태별, 검색)
+     */
+    public Page<PostManagementResponse> getPostList(
+            PostStatus status,
+            String keyword,
+            Boolean isNotice,
+            Pageable pageable
+    ) {
+        log.info("게시글 목록 조회 - status: {}, keyword: {}, isNotice: {}", status, keyword, isNotice);
+
+        Page<com.community.platform.content.domain.Post> posts;
+
+        if (keyword != null && !keyword.trim().isEmpty()) {
+            // 검색어가 있으면 제목 또는 내용으로 검색
+            if (status != null) {
+                posts = postRepository.searchByKeywordAndStatus(keyword, status, pageable);
+            } else {
+                // 상태 무관 검색 (전체 검색)
+                posts = postRepository.findAll(pageable);
+            }
+        } else if (isNotice != null && isNotice) {
+            // 공지사항만 조회
+            List<com.community.platform.content.domain.Post> noticePosts =
+                    postRepository.findNoticePostsByStatus(status != null ? status : PostStatus.PUBLISHED);
+            posts = new org.springframework.data.domain.PageImpl<>(
+                    noticePosts, pageable, noticePosts.size());
+        } else if (status != null) {
+            posts = postRepository.findByStatusOrderByPublishedAtDesc(status, pageable);
+        } else {
+            posts = postRepository.findAll(pageable);
+        }
+
+        return posts.map(this::convertToPostManagementResponse);
+    }
+
+    /**
+     * 게시글 상태 변경
+     */
+    @Transactional
+    public void updatePostStatus(Long postId, UpdatePostStatusRequest request, Long adminId) {
+        log.info("게시글 상태 변경 - postId: {}, status: {}, adminId: {}", postId, request.getStatus(), adminId);
+
+        com.community.platform.content.domain.Post post = postRepository.findById(postId)
+                .orElseThrow(() -> new IllegalArgumentException("게시글을 찾을 수 없습니다. ID: " + postId));
+
+        switch (request.getStatus()) {
+            case DELETED:
+                post.delete(adminId);
+                break;
+            case PUBLISHED:
+                if (post.getStatus() == PostStatus.DELETED) {
+                    post.restore();
+                } else if (post.getStatus() == PostStatus.DRAFT) {
+                    post.publish();
+                }
+                break;
+            case DRAFT:
+                // DRAFT로 변경은 일반적으로 허용하지 않음 (필요시 추가)
+                throw new IllegalStateException("DRAFT 상태로 변경할 수 없습니다.");
+        }
+
+        postRepository.save(post);
+    }
+
+    /**
+     * 게시글 공지사항 지정/해제
+     */
+    @Transactional
+    public void markPostAsNotice(Long postId, MarkAsNoticeRequest request) {
+        log.info("게시글 공지사항 지정/해제 - postId: {}, isNotice: {}", postId, request.getIsNotice());
+
+        com.community.platform.content.domain.Post post = postRepository.findById(postId)
+                .orElseThrow(() -> new IllegalArgumentException("게시글을 찾을 수 없습니다. ID: " + postId));
+
+        if (request.getIsNotice()) {
+            post.markAsNotice();
+        } else {
+            post.unmarkAsNotice();
+        }
+
+        postRepository.save(post);
+    }
+
+    /**
+     * 게시글 일괄 처리
+     */
+    @Transactional
+    public void bulkPostAction(BulkPostActionRequest request, Long adminId) {
+        log.info("게시글 일괄 처리 - action: {}, count: {}, adminId: {}",
+                request.getAction(), request.getPostIds().size(), adminId);
+
+        List<com.community.platform.content.domain.Post> posts =
+                postRepository.findAllById(request.getPostIds());
+
+        switch (request.getAction()) {
+            case DELETE:
+                posts.forEach(post -> post.delete(adminId));
+                break;
+            case RESTORE:
+                posts.forEach(com.community.platform.content.domain.Post::restore);
+                break;
+            case MARK_AS_NOTICE:
+                posts.forEach(com.community.platform.content.domain.Post::markAsNotice);
+                break;
+            case UNMARK_AS_NOTICE:
+                posts.forEach(com.community.platform.content.domain.Post::unmarkAsNotice);
+                break;
+        }
+
+        postRepository.saveAll(posts);
+    }
+
+    /**
+     * Post를 PostManagementResponse로 변환
+     */
+    private PostManagementResponse convertToPostManagementResponse(com.community.platform.content.domain.Post post) {
+        // 작성자 정보 조회
+        com.community.platform.user.domain.User author = userRepository.findById(post.getAuthorId())
+                .orElse(null);
+
+        // 스크랩 수 조회
+        Long scrapCount = postScrapRepository.countByPostId(post.getId());
+
+        return PostManagementResponse.builder()
+                .postId(post.getId())
+                .title(post.getTitle())
+                .summary(post.getContent().length() > 100 ?
+                        post.getContent().substring(0, 100) + "..." : post.getContent())
+                .authorNickname(author != null ? author.getNickname() : "알 수 없음")
+                .authorId(post.getAuthorId())
+                .categoryName(post.getCategory() != null ? post.getCategory().getName() : "없음")
+                .status(post.getStatus())
+                .isNoticePost(post.getIsNoticePost())
+                .viewCount(post.getViewCount())
+                .likeCount(post.getLikeCount())
+                .commentCount(post.getCommentCount())
+                .scrapCount(scrapCount)
+                .publishedAt(post.getPublishedAt())
+                .createdAt(post.getCreatedAt())
+                .deletedAt(post.getDeletedAt())
+                .deletedBy(post.getDeletedBy())
+                .build();
+    }
 }
