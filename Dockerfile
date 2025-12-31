@@ -6,16 +6,19 @@ FROM gradle:8.5-jdk17-alpine AS build
 WORKDIR /app
 
 # Gradle 파일들을 먼저 복사하여 의존성 캐싱 최적화
-COPY build.gradle ./
+COPY build.gradle settings.gradle ./
+
+# Gradle wrapper 초기화
+RUN gradle wrapper --gradle-version 8.5 --no-daemon
 
 # 의존성 다운로드 (캐시 최적화)
-RUN gradle dependencies --no-daemon || true
+RUN ./gradlew dependencies --no-daemon || true
 
 # 소스 코드 복사
 COPY src ./src
 
 # 애플리케이션 빌드 (테스트 제외)
-RUN gradle bootJar --no-daemon -x test
+RUN ./gradlew bootJar --no-daemon -x test
 
 # 2단계: 런타임 스테이지  
 FROM eclipse-temurin:17-jre-alpine
