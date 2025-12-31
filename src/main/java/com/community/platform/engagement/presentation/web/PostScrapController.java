@@ -1,10 +1,16 @@
 package com.community.platform.engagement.presentation.web;
 
+import com.community.platform.content.application.ContentMapper;
+import com.community.platform.content.domain.Post;
+import com.community.platform.content.dto.PostSummaryResponse;
+import com.community.platform.content.infrastructure.persistence.PostRepository;
 import com.community.platform.engagement.application.EngagementMapper;
 import com.community.platform.engagement.application.PostScrapService;
 import com.community.platform.engagement.domain.PostScrap;
+import com.community.platform.engagement.domain.ScrapFolder;
 import com.community.platform.engagement.dto.PostScrapRequest;
 import com.community.platform.engagement.dto.PostScrapResponse;
+import com.community.platform.engagement.dto.ScrapFolderResponse;
 import com.community.platform.shared.dto.ApiResponse;
 import com.community.platform.shared.dto.PageResponse;
 import jakarta.validation.Valid;
@@ -14,6 +20,10 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * 게시글 스크랩 관리 REST API Controller
@@ -27,6 +37,8 @@ public class PostScrapController {
 
     private final PostScrapService postScrapService;
     private final EngagementMapper engagementMapper;
+    private final PostRepository postRepository;
+    private final ContentMapper contentMapper;
 
     /**
      * 게시글 스크랩 추가
@@ -98,11 +110,24 @@ public class PostScrapController {
     public ApiResponse<PageResponse<PostScrapResponse>> getUserScraps(
             @RequestParam Long currentUserId, // TODO: Security 적용 후 제거
             @PageableDefault(size = 20) Pageable pageable) {
-        log.debug("사용자 전체 스크랩 목록 조회: userId={}, page={}", 
+        log.debug("사용자 전체 스크랩 목록 조회: userId={}, page={}",
             currentUserId, pageable.getPageNumber());
 
         Page<PostScrap> scraps = postScrapService.getUserScraps(currentUserId, pageable);
-        Page<PostScrapResponse> scrapResponses = scraps.map(engagementMapper::toPostScrapResponse);
+
+        // 게시글 정보 조회 (N+1 방지)
+        List<Long> postIds = scraps.getContent().stream()
+                .map(PostScrap::getPostId)
+                .collect(Collectors.toList());
+
+        Map<Long, Post> postMap = postRepository.findAllById(postIds).stream()
+                .collect(Collectors.toMap(Post::getId, p -> p));
+
+        // PostScrapResponse 변환 (post 정보 포함)
+        Page<PostScrapResponse> scrapResponses = scraps.map(scrap ->
+            buildPostScrapResponse(scrap, postMap.get(scrap.getPostId()))
+        );
+
         PageResponse<PostScrapResponse> response = PageResponse.of(scrapResponses);
 
         return ApiResponse.success(response);
@@ -117,11 +142,24 @@ public class PostScrapController {
             @PathVariable Long folderId,
             @RequestParam Long currentUserId,
             @PageableDefault(size = 20) Pageable pageable) {
-        log.debug("폴더별 스크랩 목록 조회: folderId={}, userId={}, page={}", 
+        log.debug("폴더별 스크랩 목록 조회: folderId={}, userId={}, page={}",
             folderId, currentUserId, pageable.getPageNumber());
 
         Page<PostScrap> scraps = postScrapService.getScrapsByFolder(currentUserId, folderId, pageable);
-        Page<PostScrapResponse> scrapResponses = scraps.map(engagementMapper::toPostScrapResponse);
+
+        // 게시글 정보 조회 (N+1 방지)
+        List<Long> postIds = scraps.getContent().stream()
+                .map(PostScrap::getPostId)
+                .collect(Collectors.toList());
+
+        Map<Long, Post> postMap = postRepository.findAllById(postIds).stream()
+                .collect(Collectors.toMap(Post::getId, p -> p));
+
+        // PostScrapResponse 변환 (post 정보 포함)
+        Page<PostScrapResponse> scrapResponses = scraps.map(scrap ->
+            buildPostScrapResponse(scrap, postMap.get(scrap.getPostId()))
+        );
+
         PageResponse<PostScrapResponse> response = PageResponse.of(scrapResponses);
 
         return ApiResponse.success(response);
@@ -153,12 +191,23 @@ public class PostScrapController {
             @RequestParam String keyword,
             @RequestParam(required = false) Long folderId,
             @PageableDefault(size = 20) Pageable pageable) {
-        log.debug("사용자 스크랩 검색: userId={}, keyword={}, folderId={}", 
+        log.debug("사용자 스크랩 검색: userId={}, keyword={}, folderId={}",
             currentUserId, keyword, folderId);
 
         Page<PostScrap> scraps = postScrapService.searchUserScraps(
             currentUserId, keyword, folderId, pageable);
-        Page<PostScrapResponse> scrapResponses = scraps.map(engagementMapper::toPostScrapResponse);
+
+        // 게시글 정보 조회 (N+1 방지)
+        List<Long> postIds = scraps.getContent().stream()
+                .map(PostScrap::getPostId)
+                .collect(Collectors.toList());
+
+        Map<Long, Post> postMap = postRepository.findAllById(postIds).stream()
+                .collect(Collectors.toMap(Post::getId, p -> p));
+
+        Page<PostScrapResponse> scrapResponses = scraps.map(scrap ->
+            buildPostScrapResponse(scrap, postMap.get(scrap.getPostId()))
+        );
         PageResponse<PostScrapResponse> response = PageResponse.of(scrapResponses);
 
         return ApiResponse.success(response);
@@ -192,7 +241,18 @@ public class PostScrapController {
         log.debug("최근 스크랩 목록 조회: userId={}, days={}", currentUserId, days);
 
         Page<PostScrap> scraps = postScrapService.getRecentScraps(currentUserId, days, pageable);
-        Page<PostScrapResponse> scrapResponses = scraps.map(engagementMapper::toPostScrapResponse);
+
+        // 게시글 정보 조회 (N+1 방지)
+        List<Long> postIds = scraps.getContent().stream()
+                .map(PostScrap::getPostId)
+                .collect(Collectors.toList());
+
+        Map<Long, Post> postMap = postRepository.findAllById(postIds).stream()
+                .collect(Collectors.toMap(Post::getId, p -> p));
+
+        Page<PostScrapResponse> scrapResponses = scraps.map(scrap ->
+            buildPostScrapResponse(scrap, postMap.get(scrap.getPostId()))
+        );
         PageResponse<PostScrapResponse> response = PageResponse.of(scrapResponses);
 
         return ApiResponse.success(response);
@@ -241,5 +301,33 @@ public class PostScrapController {
 
         Object[] statistics = postScrapService.getScrapStatistics(days);
         return ApiResponse.success(statistics);
+    }
+
+    // ========== Helper Methods ==========
+
+    /**
+     * PostScrap을 PostScrapResponse로 변환 (게시글 정보 포함)
+     */
+    private PostScrapResponse buildPostScrapResponse(PostScrap scrap, Post post) {
+        PostScrapResponse.PostScrapResponseBuilder builder = PostScrapResponse.builder()
+                .id(scrap.getId())
+                .postId(scrap.getPostId())
+                .userId(scrap.getUserId())
+                .folderId(scrap.getScrapFolder() != null ? scrap.getScrapFolder().getId() : null)
+                .createdAt(scrap.getCreatedAt());
+
+        // post 정보 추가
+        if (post != null) {
+            PostSummaryResponse postSummary = contentMapper.toPostSummaryResponse(post);
+            builder.post(postSummary);
+        }
+
+        // scrapFolder 정보 추가
+        if (scrap.getScrapFolder() != null) {
+            ScrapFolderResponse folderResponse = engagementMapper.toScrapFolderResponse(scrap.getScrapFolder());
+            builder.scrapFolder(folderResponse);
+        }
+
+        return builder.build();
     }
 }

@@ -38,7 +38,10 @@ public interface EngagementMapper {
 
     /**
      * PostScrap 엔티티를 PostScrapResponse DTO로 변환
+     * postId, userId, folderId는 자동 매핑
+     * post와 scrapFolder는 별도로 설정해야 함
      */
+    @Mapping(target = "folderId", expression = "java(postScrap.getScrapFolder() != null ? postScrap.getScrapFolder().getId() : null)")
     @Mapping(target = "post", ignore = true) // 별도 설정 필요
     @Mapping(target = "scrapFolder", ignore = true) // 별도 설정 필요
     PostScrapResponse toPostScrapResponse(PostScrap postScrap);
@@ -78,11 +81,14 @@ public interface EngagementMapper {
     /**
      * PostScrap과 관련 정보를 함께 사용하여 완전한 PostScrapResponse 생성
      */
-    default PostScrapResponse toPostScrapResponseWithDetails(PostScrap postScrap, 
-                                                           PostSummaryResponse post, 
+    default PostScrapResponse toPostScrapResponseWithDetails(PostScrap postScrap,
+                                                           PostSummaryResponse post,
                                                            ScrapFolderResponse scrapFolder) {
         return PostScrapResponse.builder()
                 .id(postScrap.getId())
+                .postId(postScrap.getPostId())
+                .userId(postScrap.getUserId())
+                .folderId(postScrap.getScrapFolder() != null ? postScrap.getScrapFolder().getId() : null)
                 .post(post)
                 .scrapFolder(scrapFolder)
                 .createdAt(postScrap.getCreatedAt())

@@ -28,9 +28,9 @@ public interface PostScrapRepository extends JpaRepository<PostScrap, Long> {
     Page<PostScrap> findByScrapFolderIdOrderByCreatedAtDesc(Long scrapFolderId, Pageable pageable);
     
     // 특정 사용자의 특정 폴더 스크랩 조회 (사용자의 폴더별 스크랩 목록용)
-    @Query("SELECT ps FROM PostScrap ps WHERE ps.userId = :userId AND ps.scrapFolder.id = :scrapFolderId ORDER BY ps.createdAt DESC")
-    Page<PostScrap> findByUserIdAndScrapFolderIdOrderByCreatedAtDesc(@Param("userId") Long userId, 
-                                                                    @Param("scrapFolderId") Long scrapFolderId, 
+    @Query("SELECT ps FROM PostScrap ps LEFT JOIN FETCH ps.scrapFolder WHERE ps.userId = :userId AND ps.scrapFolder.id = :scrapFolderId ORDER BY ps.createdAt DESC")
+    Page<PostScrap> findByUserIdAndScrapFolderIdOrderByCreatedAtDesc(@Param("userId") Long userId,
+                                                                    @Param("scrapFolderId") Long scrapFolderId,
                                                                     Pageable pageable);
     
     // 특정 게시글의 스크랩 개수 조회 (게시글 인기도 측정용)

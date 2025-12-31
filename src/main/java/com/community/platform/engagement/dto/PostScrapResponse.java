@@ -15,11 +15,17 @@ import java.time.LocalDateTime;
 public class PostScrapResponse {
 
     private Long id; // 스크랩 ID
-    
+
+    private Long postId; // 게시글 ID (필수)
+
+    private Long userId; // 사용자 ID (필수)
+
+    private Long folderId; // 폴더 ID (필수)
+
     private PostSummaryResponse post; // 스크랩된 게시글 정보
-    
+
     private ScrapFolderResponse scrapFolder; // 스크랩 폴더 정보
-    
+
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime createdAt; // 스크랩한 시간
 }
